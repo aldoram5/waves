@@ -4,6 +4,7 @@
 /* START OF COMPILED CODE */
 
 /* START-USER-IMPORTS */
+import Player from '../gameobjects/Player';
 /* END-USER-IMPORTS */
 
 export default class Level1 extends Phaser.Scene {
@@ -89,11 +90,105 @@ export default class Level1 extends Phaser.Scene {
 
 	/* START-USER-CODE */
 
-	// Write your code here
+	private player!: Player;
 
 	create() {
-
 		this.editorCreate();
+
+		// Get all platforms (rectangles created by editor)
+		const platforms = this.getPlatforms();
+
+		// Enable physics on all platforms
+		platforms.forEach(platform => {
+			this.physics.add.existing(platform, true); // Static bodies
+			const body = platform.body as Phaser.Physics.Arcade.StaticBody;
+			body.updateFromGameObject(); // Match body to rectangle bounds
+		});
+
+		// Create player at starting position (on the floor platform)
+		// Floor is at y=675, player needs to be above it
+		this.player = new Player(this, 200, 630);
+
+		// Setup one-way platform collisions (can jump through from below)
+		// Only the floor, ceiling, and walls should be solid from all directions
+		const floor = platforms.find(p => p.y > 650); // Floor is at y=675
+		const ceiling = platforms.find(p => p.y === 0); // Ceiling at top
+		const walls = platforms.filter(p => p.scaleX < 1); // Walls are narrow
+
+		// Solid collisions for floor, ceiling, and walls
+		if (floor) this.physics.add.collider(this.player, floor);
+		if (ceiling) this.physics.add.collider(this.player, ceiling);
+		walls.forEach(wall => {
+			this.physics.add.collider(this.player, wall);
+		});
+
+		// One-way platform collisions for middle platforms
+		const oneWayPlatforms = platforms.filter(p =>
+			p !== floor && p !== ceiling && !walls.includes(p)
+		);
+		oneWayPlatforms.forEach(platform => {
+			this.physics.add.collider(
+				this.player,
+				platform,
+				undefined, // No collision callback
+				this.oneWayPlatformCheck, // Process callback for one-way collision
+				this
+			);
+		});
+
+		// Track platform contact for jumping/falling states
+		this.events.on('update', () => {
+			const body = this.player.body as Phaser.Physics.Arcade.Body;
+			this.player.setOnPlatform(body.blocked.down || body.touching.down);
+		});
+	}
+
+	/**
+	 * Get all rectangle game objects in the scene to use as platforms.
+	 * These are created by Phaser Editor's editorCreate method.
+	 *
+	 * @returns Array of rectangle game objects to enable physics on
+	 */
+	private getPlatforms(): Phaser.GameObjects.Rectangle[] {
+		const allObjects = this.children.list;
+		const platforms = allObjects.filter(obj =>
+			obj instanceof Phaser.GameObjects.Rectangle
+		) as Phaser.GameObjects.Rectangle[];
+		return platforms;
+	}
+
+	/**
+	 * Process callback for one-way platforms.
+	 * Only allows collision when player is falling from above.
+	 * Allows jumping through platforms from below (like Snow Bros, Bubble Bobble).
+	 *
+	 * @param player The player body or game object
+	 * @param platform The platform body or game object
+	 * @returns True to allow collision, false to pass through
+	 */
+	private oneWayPlatformCheck(
+		player: Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
+		platform: Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
+	): boolean {
+		const playerBody = (player as any).body || player as Phaser.Physics.Arcade.Body;
+		const platformBody = (platform as any).body || platform as Phaser.Physics.Arcade.StaticBody;
+
+		// Get the bottom of the player's collision box (previous frame position)
+		const playerPrevBottom = playerBody.prev.y + playerBody.height;
+
+		// Get the top of the platform
+		const platformTop = platformBody.y;
+
+		// Only collide if:
+		// 1. Player is falling or stationary (velocity.y >= 0)
+		// 2. Player's PREVIOUS bottom position was above the platform top
+		// This allows jumping through from below while landing from above
+		return playerBody.velocity.y >= 0 && playerPrevBottom <= platformTop + 5;
+	}
+
+	update() {
+		// Update player state machine and animations
+		this.player?.update();
 	}
 
 	/* END-USER-CODE */

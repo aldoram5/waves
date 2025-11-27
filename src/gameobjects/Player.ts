@@ -1,0 +1,653 @@
+import Phaser from 'phaser';
+import { PlayerState, STATE_PRIORITY, FRAME_DURATIONS, PLAYER_PHYSICS } from './PlayerStates';
+
+/**
+ * Player entity for W.A.V.E.S game.
+ * Extends Phaser.Physics.Arcade.Sprite to provide physics-based movement.
+ * Manages two visual components: the whale sprite (this sprite) and a separate wave sprite.
+ *
+ * The Player uses a state machine with 8 states:
+ * - IDLE: Default state with idle animations
+ * - MOVING: Horizontal movement with arrow keys
+ * - HIDING: Whale shows tail, hides body (down arrow)
+ * - JUMPING: Full jump sequence with 3 animation phases
+ * - FALLING: Falling state when no platform below
+ * - ATTACKING: Wave attack (Z button)
+ * - INHALING: Inhale animation (X button held)
+ * - DYING: Death sequence when taking damage
+ *
+ * State Priority: DYING > ATTACKING/INHALING > JUMPING > FALLING > HIDING > MOVING > IDLE
+ */
+export default class Player extends Phaser.Physics.Arcade.Sprite {
+
+    // State management
+    private currentState: PlayerState;
+    private previousState: PlayerState;
+
+    // Wave sprite (separate visual component)
+    private waveSprite: Phaser.GameObjects.Sprite;
+    private waveStartX: number; // X position where wave stays during jump
+    private waveY: number; // Fixed Y position for wave (stays on platform level)
+
+    // Input references
+    private cursors: Phaser.Types.Input.Keyboard.CursorKeys | null;
+    private zKey: Phaser.Input.Keyboard.Key | null;
+    private xKey: Phaser.Input.Keyboard.Key | null;
+
+    // Animation frame counters
+    private frameCounter: number;
+    private currentWhaleFrame: number; // 0 or 1 for alternating frames
+    private currentWaveFrame: number;  // 0 or 1 for wave1/wave2
+
+    // Jump state tracking
+    private jumpPhase: 'start' | 'air' | 'landing' | null;
+    private landingFrameCount: number;
+
+    // Platform collision tracking
+    private isOnPlatform: boolean;
+
+    // Death state tracking
+    private deathScaleProgress: number;
+
+    constructor(scene: Phaser.Scene, x: number, y: number) {
+        // Create sprite with 'whale1' as default texture
+        super(scene, x, y, 'whale1');
+
+        // Add to scene and enable physics
+        scene.add.existing(this);
+        scene.physics.add.existing(this);
+
+        // Configure physics body
+        this.setupPhysicsBody();
+
+        // Create wave sprite (separate game object)
+        this.waveSprite = scene.add.sprite(x, y + PLAYER_PHYSICS.WAVE_OFFSET_Y, 'wave1');
+        this.waveStartX = x;
+        this.waveY = y + PLAYER_PHYSICS.WAVE_OFFSET_Y; // Wave stays at platform level
+
+        // Initialize state
+        this.currentState = PlayerState.IDLE;
+        this.previousState = PlayerState.IDLE;
+
+        // Initialize input
+        this.cursors = scene.input.keyboard?.createCursorKeys() || null;
+        this.zKey = scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.Z) || null;
+        this.xKey = scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.X) || null;
+
+        // Initialize counters
+        this.frameCounter = 0;
+        this.currentWhaleFrame = 0;
+        this.currentWaveFrame = 0;
+        this.landingFrameCount = 0;
+        this.jumpPhase = null;
+        this.isOnPlatform = false;
+        this.deathScaleProgress = 0;
+    }
+
+    /**
+     * Configure physics body properties for the player.
+     * Called during construction to set up collision detection and movement physics.
+     */
+    private setupPhysicsBody(): void {
+        const body = this.body as Phaser.Physics.Arcade.Body;
+
+        // Set collision box size (smaller than sprite for better feel)
+        // Whale sprites are 128x128 with transparent padding
+        body.setSize(50, 40);
+
+        // Offset collision box to account for transparent padding in sprite
+        // X offset centers horizontally, Y offset pushes down to whale's body
+        body.setOffset(40, 70);
+
+        // Prevent player from leaving screen
+        body.setCollideWorldBounds(true);
+
+        // No bounce on collision
+        body.setBounce(0);
+
+        // Horizontal drag for smooth stopping
+        body.setDrag(600, 0);
+
+        // Limit horizontal speed, allow full gravity
+        body.setMaxVelocity(300, 1000);
+    }
+
+    /**
+     * Main update loop for the Player.
+     * Called every frame by the scene.
+     * Handles state evaluation, state transitions, and rendering updates.
+     */
+    public update(): void {
+        // Evaluate what state we should be in based on current conditions
+        const desiredState = this.evaluateState();
+
+        // Transition to new state if different from current
+        if (desiredState !== this.currentState) {
+            this.exitState(this.currentState);
+            this.previousState = this.currentState;
+            this.currentState = desiredState;
+            this.enterState(this.currentState);
+        }
+
+        // Update current state logic
+        this.updateState(this.currentState);
+
+        // Update visual representations
+        this.updateAnimations();
+        this.updateWavePosition();
+    }
+
+    /**
+     * Evaluate which state the player should be in based on current conditions.
+     * Uses STATE_PRIORITY to resolve conflicts when multiple states could be active.
+     *
+     * @returns The state the player should transition to
+     */
+    private evaluateState(): PlayerState {
+        const body = this.body as Phaser.Physics.Arcade.Body;
+
+        // DYING state - highest priority, cannot be interrupted
+        if (this.currentState === PlayerState.DYING) {
+            // Only exit DYING state when death animation completes
+            if (this.deathScaleProgress >= 1.0) {
+                // Death complete - respawn logic handled externally
+                return PlayerState.DYING;
+            }
+            return PlayerState.DYING;
+        }
+
+        // ATTACKING state - Z key just pressed
+        if (this.zKey && Phaser.Input.Keyboard.JustDown(this.zKey)) {
+            return PlayerState.ATTACKING;
+        }
+
+        // ATTACKING state continuation - stay in state until animation completes
+        if (this.currentState === PlayerState.ATTACKING) {
+            if (this.frameCounter < FRAME_DURATIONS.ATTACK_INHALE) {
+                return PlayerState.ATTACKING;
+            }
+            // Animation complete, fall through to other states
+        }
+
+        // INHALING state - X key held down
+        if (this.xKey && this.xKey.isDown) {
+            return PlayerState.INHALING;
+        }
+
+        // JUMPING state - Space key just pressed while on platform
+        if (this.cursors?.space && Phaser.Input.Keyboard.JustDown(this.cursors.space) &&
+            this.isOnPlatform && this.currentState !== PlayerState.JUMPING) {
+            return PlayerState.JUMPING;
+        }
+
+        // JUMPING state continuation - stay in state until landing completes
+        if (this.currentState === PlayerState.JUMPING) {
+            // Still in jump if not on platform, or if landing animation playing
+            if (!this.isOnPlatform || this.jumpPhase === 'landing') {
+                return PlayerState.JUMPING;
+            }
+            // Landing complete, fall through to other states
+        }
+
+        // FALLING state - not on platform and moving downward
+        // Don't enter FALLING if we just jumped (handle jump arc separately)
+        if (!this.isOnPlatform && body.velocity.y > 0 &&
+            this.currentState !== PlayerState.JUMPING) {
+            return PlayerState.FALLING;
+        }
+
+        // HIDING state - Down arrow held while on platform
+        if (this.cursors?.down?.isDown && this.isOnPlatform) {
+            return PlayerState.HIDING;
+        }
+
+        // MOVING state - Left or Right arrow pressed while on platform
+        if ((this.cursors?.left?.isDown || this.cursors?.right?.isDown) &&
+            this.isOnPlatform) {
+            return PlayerState.MOVING;
+        }
+
+        // IDLE state - default when no other conditions met
+        return PlayerState.IDLE;
+    }
+
+    /**
+     * Called when entering a new state.
+     * Performs initialization and setup for the state.
+     *
+     * @param state The state being entered
+     */
+    private enterState(state: PlayerState): void {
+        // Reset frame counter for all states
+        this.frameCounter = 0;
+
+        switch (state) {
+            // @ts-ignore fall through intended
+            case PlayerState.IDLE:
+                // Reset to default textures
+                this.setTexture('whale1');
+                this.waveSprite.setTexture('wave1');
+                this.currentWhaleFrame = 0;
+                this.currentWaveFrame = 0;
+                // Fall through to MOVING for shared setup
+
+            case PlayerState.MOVING:
+                // Reposition wave to match whale's position when becoming idle
+                this.waveStartX = this.x;
+                this.waveY = this.y + PLAYER_PHYSICS.WAVE_OFFSET_Y;
+                // Continue idle animation while moving
+                // Horizontal movement handled in updateState
+                break;
+
+            case PlayerState.HIDING:
+                // Switch to tail textures
+                this.setTexture('whale-tail1');
+                this.currentWhaleFrame = 0;
+                break;
+
+            case PlayerState.JUMPING:
+                // Start jump sequence
+                this.jumpPhase = 'start';
+                this.setTexture('whale-jump1');
+                // Store wave X position at jump start (Y follows whale's platform)
+                this.waveStartX = this.x;
+                // Apply upward velocity
+                const body = this.body as Phaser.Physics.Arcade.Body;
+                body.setVelocityY(PLAYER_PHYSICS.JUMP_VELOCITY);
+                break;
+
+            case PlayerState.FALLING:
+                // Set falling texture (whale-jump2 upside down)
+                this.setTexture('whale-jump2');
+                this.setFlipY(true); // Flip vertically (scaleY = -1)
+                break;
+
+            case PlayerState.ATTACKING:
+                // Show attack texture
+                this.setTexture('whale-inhale2');
+                // TODO: Spawn wave attack projectile
+                break;
+
+            case PlayerState.INHALING:
+                // Start inhale animation
+                this.setTexture('whale-inhale1');
+                this.currentWhaleFrame = 0;
+                // TODO: Activate inhale proximity detection
+                break;
+
+            case PlayerState.DYING:
+                // Begin death sequence
+                this.deathScaleProgress = 0;
+                // Hide wave immediately
+                this.waveSprite.setVisible(false);
+                // TODO: Play death sound
+                break;
+        }
+    }
+
+    /**
+     * Called when exiting a state.
+     * Performs cleanup and resets state-specific properties.
+     *
+     * @param state The state being exited
+     */
+    private exitState(state: PlayerState): void {
+        switch (state) {
+            case PlayerState.HIDING:
+                // Return to normal whale texture
+                this.setTexture('whale1');
+                break;
+
+            case PlayerState.JUMPING:
+                // Reset jump tracking
+                this.jumpPhase = null;
+                this.landingFrameCount = 0;
+                break;
+
+            case PlayerState.FALLING:
+                // Reset vertical flip
+                this.setFlipY(false);
+                break;
+
+            case PlayerState.ATTACKING:
+                // Return to idle texture
+                this.setTexture('whale1');
+                break;
+
+            case PlayerState.INHALING:
+                // Return to idle texture
+                this.setTexture('whale1');
+                // TODO: Deactivate inhale proximity detection
+                break;
+
+            case PlayerState.DYING:
+                // Reset visibility and scale when respawning
+                this.setVisible(true);
+                this.waveSprite.setVisible(true);
+                this.setScale(1, 1);
+                break;
+        }
+    }
+
+    /**
+     * Update logic for the current state.
+     * Called every frame for the active state.
+     * Handles state-specific behavior and physics.
+     *
+     * @param state The current active state
+     */
+    private updateState(state: PlayerState): void {
+        const body = this.body as Phaser.Physics.Arcade.Body;
+
+        // Horizontal movement allowed in most states (except DYING)
+        if (state !== PlayerState.DYING) {
+            this.handleHorizontalMovement();
+        }
+
+        switch (state) {
+            case PlayerState.IDLE:
+                // No special logic - animations handled in updateAnimations()
+                // Drag naturally slows horizontal movement to zero
+                break;
+
+            case PlayerState.MOVING:
+                // Horizontal movement already handled above
+                // Animation continues in updateAnimations()
+                break;
+
+            case PlayerState.HIDING:
+                // Prevent horizontal movement while hiding
+                body.setVelocityX(0);
+                // Tail animation handled in updateAnimations()
+                break;
+
+            case PlayerState.JUMPING:
+                this.updateJumpState();
+                break;
+
+            case PlayerState.FALLING:
+                // Gravity handles downward velocity
+                // Horizontal movement allowed
+                // Landing detection handled in evaluateState
+                break;
+
+            case PlayerState.ATTACKING:
+                // Hold position during attack
+                body.setVelocityX(0);
+                // Attack animation duration handled in evaluateState
+                break;
+
+            case PlayerState.INHALING:
+                // Allow movement while inhaling
+                // Animation alternates in updateAnimations()
+                // TODO: Check for nearby stunned enemies to inhale
+                break;
+
+            case PlayerState.DYING:
+                this.updateDeathState();
+                break;
+        }
+
+        // Increment frame counter for animation timing
+        this.frameCounter++;
+    }
+
+    /**
+     * Handle horizontal movement based on arrow key input.
+     * Applies velocity and updates sprite facing direction.
+     * Called every frame for states that allow movement.
+     */
+    private handleHorizontalMovement(): void {
+        const body = this.body as Phaser.Physics.Arcade.Body;
+
+        if (this.cursors?.left?.isDown) {
+            body.setVelocityX(-PLAYER_PHYSICS.MOVE_SPEED);
+            this.setFlipX(false); // Face left (normal orientation)
+        } else if (this.cursors?.right?.isDown) {
+            body.setVelocityX(PLAYER_PHYSICS.MOVE_SPEED);
+            this.setFlipX(true); // Face right (flip horizontally)
+        }
+        // If neither key pressed, drag will slow player naturally
+    }
+
+    /**
+     * Update logic specific to the JUMPING state.
+     * Handles three-phase jump: start, air, landing.
+     */
+    private updateJumpState(): void {
+        const body = this.body as Phaser.Physics.Arcade.Body;
+
+        switch (this.jumpPhase) {
+            case 'start':
+                // whale-jump1 plays for exactly JUMP_START frames (5)
+                if (this.frameCounter >= FRAME_DURATIONS.JUMP_START) {
+                    this.jumpPhase = 'air';
+                    this.setTexture('whale-jump2');
+                    this.frameCounter = 0; // Reset for next phase
+                }
+                break;
+
+            case 'air':
+                // whale-jump2 continues until player lands on platform
+                // Landing detected by collision callback setting isOnPlatform = true
+                if (this.isOnPlatform && body.velocity.y >= 0) {
+                    this.jumpPhase = 'landing';
+                    this.setTexture('whale-jump3');
+                    this.frameCounter = 0;
+                    this.landingFrameCount = 0;
+                }
+                break;
+
+            case 'landing':
+                // whale-jump3 plays for exactly JUMP_LANDING frames (5)
+                this.landingFrameCount++;
+                if (this.landingFrameCount >= FRAME_DURATIONS.JUMP_LANDING) {
+                    // Landing complete - evaluateState will transition to IDLE/MOVING
+                }
+                break;
+        }
+    }
+
+    /**
+     * Update logic specific to the DYING state.
+     * Compresses whale sprite vertically until scaleY reaches 0.
+     */
+    private updateDeathState(): void {
+        const body = this.body as Phaser.Physics.Arcade.Body;
+
+        // Stop all movement
+        body.setVelocity(0, 0);
+
+        // Compress scaleY over approximately 60 frames (1 second at 60fps)
+        const compressionSpeed = 1 / 60;
+        this.deathScaleProgress += compressionSpeed;
+
+        // Apply scale compression
+        const scaleY = Math.max(0, 1 - this.deathScaleProgress);
+        this.setScale(this.scaleX, scaleY);
+
+        if (this.deathScaleProgress >= 1.0) {
+            // Death animation complete
+            this.setVisible(false);
+            // TODO: Trigger respawn or game over
+        }
+    }
+
+    /**
+     * Update animations for whale and wave sprites based on current state.
+     * Called every frame after state update.
+     * Manages frame-based texture swapping for smooth animation.
+     */
+    private updateAnimations(): void {
+        switch (this.currentState) {
+            case PlayerState.IDLE:
+                this.animateIdle();
+                break;
+
+            case PlayerState.MOVING:
+                this.animateIdle(); // Use same animation as idle
+                break;
+
+            case PlayerState.HIDING:
+                this.animateTail();
+                break;
+
+            case PlayerState.JUMPING:
+                // Jump textures handled in updateJumpState()
+                // No wave animation during jump
+                break;
+
+            case PlayerState.FALLING:
+                // Falling texture (whale-jump2 flipped) set in enterState()
+                // No animation updates needed
+                break;
+
+            case PlayerState.ATTACKING:
+                // Attack texture (whale-inhale2) set in enterState()
+                // No animation updates needed
+                break;
+
+            case PlayerState.INHALING:
+                this.animateInhale();
+                break;
+
+            case PlayerState.DYING:
+                // Death handled in updateDeathState()
+                // No texture animation needed
+                break;
+        }
+
+        // Wave animation (except during jump when it stays still)
+        if (this.currentState !== PlayerState.JUMPING) {
+            this.animateWave();
+        }
+    }
+
+    /**
+     * Animate whale between whale1 and whale2 textures.
+     * Used for IDLE and MOVING states.
+     * Swaps textures every IDLE_SWAP frames (20 frames at 60fps = 0.33 seconds).
+     */
+    private animateIdle(): void {
+        // Swap every 20 frames
+        if (this.frameCounter % FRAME_DURATIONS.IDLE_SWAP === 0 && this.frameCounter > 0) {
+            this.currentWhaleFrame = 1 - this.currentWhaleFrame; // Toggle 0/1
+            const texture = this.currentWhaleFrame === 0 ? 'whale1' : 'whale2';
+            this.setTexture(texture);
+        }
+    }
+
+    /**
+     * Animate whale between whale-tail1 and whale-tail2 textures.
+     * Used for HIDING state.
+     * Swaps textures every TAIL_SWAP frames (15 frames at 60fps = 0.25 seconds).
+     */
+    private animateTail(): void {
+        // Swap every 15 frames (slightly faster than idle)
+        if (this.frameCounter % FRAME_DURATIONS.TAIL_SWAP === 0 && this.frameCounter > 0) {
+            this.currentWhaleFrame = 1 - this.currentWhaleFrame; // Toggle 0/1
+            const texture = this.currentWhaleFrame === 0 ? 'whale-tail1' : 'whale-tail2';
+            this.setTexture(texture);
+        }
+    }
+
+    /**
+     * Animate whale between whale-inhale1 and whale-inhale2 textures.
+     * Used for INHALING state (while X key held).
+     * Swaps textures every INHALE_SWAP frames (8 frames at 60fps = 0.13 seconds).
+     */
+    private animateInhale(): void {
+        // Swap every 8 frames (faster breathing effect)
+        if (this.frameCounter % FRAME_DURATIONS.INHALE_SWAP === 0 && this.frameCounter > 0) {
+            this.currentWhaleFrame = 1 - this.currentWhaleFrame; // Toggle 0/1
+            const texture = this.currentWhaleFrame === 0 ? 'whale-inhale1' : 'whale-inhale2';
+            this.setTexture(texture);
+        }
+    }
+
+    /**
+     * Animate wave sprite between wave1 and wave2 textures.
+     * Matches whale animation timing (WAVE_SWAP frames).
+     * Wave animation continues in all states except JUMPING and DYING.
+     */
+    private animateWave(): void {
+        // Don't animate wave if it's hidden
+        if (!this.waveSprite.visible) {
+            return;
+        }
+
+        // Swap every 20 frames (matches idle animation)
+        if (this.frameCounter % FRAME_DURATIONS.WAVE_SWAP === 0 && this.frameCounter > 0) {
+            this.currentWaveFrame = 1 - this.currentWaveFrame; // Toggle 0/1
+            const texture = this.currentWaveFrame === 0 ? 'wave1' : 'wave2';
+            this.waveSprite.setTexture(texture);
+        }
+    }
+
+    /**
+     * Update wave sprite position based on whale position and current state.
+     * Wave stays at a fixed Y position (platform level) and only moves on X axis.
+     *
+     * IDLE/MOVING: Wave locks to whale position (both X and Y repositioned)
+     * JUMPING/FALLING: Wave X locked at jump start, Y stays at platform level
+     * Other states: Wave follows whale X, Y stays at platform level
+     */
+    private updateWavePosition(): void {
+        switch (this.currentState) {
+            case PlayerState.IDLE:
+            case PlayerState.MOVING:
+                // Wave locks to whale position - update both X and Y
+                this.waveSprite.setPosition(
+                    this.x,
+                    this.waveY
+                );
+                break;
+
+            case PlayerState.JUMPING:
+            case PlayerState.FALLING:
+                // Wave X stays at position where jump started, Y stays at platform level
+                // Creates effect of whale jumping out of water
+                this.waveSprite.setPosition(
+                    this.waveStartX,
+                    this.waveY
+                );
+                break;
+
+            case PlayerState.DYING:
+                // Wave already hidden in enterState()
+                // No position update needed
+                break;
+
+            default:
+                // All other states (HIDING, ATTACKING, INHALING):
+                // Wave follows whale's X position only, Y stays at platform level
+                this.waveSprite.setPosition(
+                    this.x,
+                    this.waveY
+                );
+                break;
+        }
+    }
+
+    /**
+     * Update whether player is currently on a platform.
+     * Called by scene's collision detection system.
+     *
+     * @param onPlatform True if player is touching a platform from above
+     */
+    public setOnPlatform(onPlatform: boolean): void {
+        this.isOnPlatform = onPlatform;
+    }
+
+    /**
+     * Trigger player death sequence.
+     * Transitions to DYING state which cannot be interrupted.
+     * This method is called when the player takes damage.
+     */
+    public die(): void {
+        if (this.currentState !== PlayerState.DYING) {
+            this.currentState = PlayerState.DYING;
+            this.enterState(PlayerState.DYING);
+        }
+    }
+}
