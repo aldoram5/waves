@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import Level1 from "./scenes/Level1";
 import Preload from "./scenes/Preload";
+import MainMenu from "./scenes/MainMenu";
 
 class Boot extends Phaser.Scene {
 
@@ -24,11 +25,12 @@ window.addEventListener('load', function () {
 		height: 720,
 		backgroundColor: "#2f2f2f",
 		parent: "game-container",
+		fps: { target: 60 },
 		scale: {
 			mode: Phaser.Scale.ScaleModes.FIT,
 			autoCenter: Phaser.Scale.Center.CENTER_BOTH
 		},
-		scene: [Boot, Preload, Level1]
+		scene: [Boot, Preload, MainMenu, Level1]
 	});
 
 	game.scene.start("Boot");

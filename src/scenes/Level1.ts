@@ -51,16 +51,38 @@ export default class Level1 extends Phaser.Scene {
 		leftwall.strokeColor = 2293248;
 		leftwall.lineWidth = 5;
 
-		// leftwall_1
-		const leftwall_1 = this.add.rectangle(1239, 0, 128, 128);
-		leftwall_1.scaleX = 0.3;
-		leftwall_1.scaleY = 5.7;
-		leftwall_1.setOrigin(0, 0);
-		leftwall_1.isFilled = true;
-		leftwall_1.fillColor = 0;
-		leftwall_1.isStroked = true;
-		leftwall_1.strokeColor = 2293248;
-		leftwall_1.lineWidth = 5;
+		// rightwall
+		const rightwall = this.add.rectangle(1239, 0, 128, 128);
+		rightwall.scaleX = 0.3;
+		rightwall.scaleY = 5.7;
+		rightwall.setOrigin(0, 0);
+		rightwall.isFilled = true;
+		rightwall.fillColor = 0;
+		rightwall.isStroked = true;
+		rightwall.strokeColor = 2293248;
+		rightwall.lineWidth = 5;
+
+		// platform1
+		const platform1 = this.add.rectangle(43, 575, 128, 128);
+		platform1.scaleX = 7;
+		platform1.scaleY = 0.35242533493618;
+		platform1.setOrigin(0, 0);
+		platform1.isFilled = true;
+		platform1.fillColor = 0;
+		platform1.isStroked = true;
+		platform1.strokeColor = 2293248;
+		platform1.lineWidth = 5;
+
+		// platform2
+		const platform2 = this.add.rectangle(345, 458, 128, 128);
+		platform2.scaleX = 7;
+		platform2.scaleY = 0.35242533493618;
+		platform2.setOrigin(0, 0);
+		platform2.isFilled = true;
+		platform2.fillColor = 0;
+		platform2.isStroked = true;
+		platform2.strokeColor = 2293248;
+		platform2.lineWidth = 5;
 
 		this.events.emit("scene-awake");
 	}

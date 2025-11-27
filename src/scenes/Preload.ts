@@ -62,6 +62,14 @@ export default class Preload extends Phaser.Scene {
 
 	create() {
 
+		// Start background music that persists across scenes
+		// The music loops indefinitely and won't stop when scenes change
+		const music = this.sound.add("wavemain1", {
+			loop: true,
+			volume: 0.5
+		});
+		music.play();
+
 		if (process.env.NODE_ENV === "development") {
 
 			const start = new URLSearchParams(location.search).get("start");

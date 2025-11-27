@@ -103,6 +103,11 @@ export default class MainMenu extends Phaser.Scene {
 	create() {
 
 		this.editorCreate();
+
+		// Start Level1 when any key is pressed
+		this.input.keyboard?.once('keydown', () => {
+			this.scene.start("Level1");
+		});
 	}
 
 	/* END-USER-CODE */
