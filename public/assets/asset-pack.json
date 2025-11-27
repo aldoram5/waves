@@ -2,14 +2,106 @@
     "section1": {
         "files": [
             {
-                "url": "assets/FufuSuperDino.png",
+                "url": "assets/enemy-base.png",
                 "type": "image",
-                "key": "FufuSuperDino"
+                "key": "enemy-base"
+            },
+            {
+                "url": "assets/enemy-stun.png",
+                "type": "image",
+                "key": "enemy-stun"
+            },
+            {
+                "url": "assets/enemy2.png",
+                "type": "image",
+                "key": "enemy2"
+            },
+            {
+                "url": "assets/enemy2-look.png",
+                "type": "image",
+                "key": "enemy2-look"
+            },
+            {
+                "url": "assets/enemy2-stun.png",
+                "type": "image",
+                "key": "enemy2-stun"
+            },
+            {
+                "url": "assets/enemyAttackwhale.png",
+                "type": "image",
+                "key": "enemyAttackwhale"
+            },
+            {
+                "url": "assets/wave1.png",
+                "type": "image",
+                "key": "wave1"
+            },
+            {
+                "url": "assets/wave2.png",
+                "type": "image",
+                "key": "wave2"
+            },
+            {
+                "url": "assets/waveattack.png",
+                "type": "image",
+                "key": "waveattack"
             },
             {
                 "url": "assets/WAVELOGO.png",
                 "type": "image",
                 "key": "WAVELOGO"
+            },
+            {
+                "url": [
+                    "assets/music/wavemain1.wav"
+                ],
+                "type": "audio",
+                "key": "wavemain1"
+            },
+            {
+                "url": "assets/whale-inhale1.png",
+                "type": "image",
+                "key": "whale-inhale1"
+            },
+            {
+                "url": "assets/whale-inhale2.png",
+                "type": "image",
+                "key": "whale-inhale2"
+            },
+            {
+                "url": "assets/whale-jump1.png",
+                "type": "image",
+                "key": "whale-jump1"
+            },
+            {
+                "url": "assets/whale-jump2.png",
+                "type": "image",
+                "key": "whale-jump2"
+            },
+            {
+                "url": "assets/whale-jump3.png",
+                "type": "image",
+                "key": "whale-jump3"
+            },
+            {
+                "url": "assets/whale-tail1.png",
+                "type": "image",
+                "key": "whale-tail1"
+            },
+            {
+                "url": "assets/whale-tail2.png",
+                "type": "image",
+                "key": "whale-tail2"
+            },
+            {
+                "url": "assets/whale1.png",
+                "type": "image",
+                "key": "whale1"
+            },
+            {
+                "url": "assets/whale2.png",
+                "type": "image",
+                "key": "whale2"
             }
         ]
     },

@@ -1,3 +1,15 @@
+# W.A.V.E.S
+
+Whale Agent Virus Elimination System (GAME)
+
+W.A.V.E.S is a Phaser Game built for the [Game Off 2025](https://itch.io/jam/game-off-2025) #GitHubGameOff.
+
+It follows the same basic structure any project follows, I created it with the Phaser Editor Vite Typescript Template, the original README for it is below.
+
+
+
+# ORIGINAL README:
+
 # Phaser Editor Vite TypeScript Template
 
 This is a Phaser Editor v4 project template that uses Vite TypeScript for bundling. It supports hot-reloading for quick development workflow and includes scripts to generate production-ready builds.

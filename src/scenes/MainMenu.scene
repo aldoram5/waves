@@ -19,8 +19,8 @@
             "texture": {
                 "key": "WAVELOGO"
             },
-            "x": -195,
-            "y": -233,
+            "x": -176,
+            "y": -254,
             "originX": 0,
             "originY": 0
         },
@@ -28,13 +28,178 @@
             "type": "Text",
             "id": "6ccda904-7758-4d17-a818-31e5c9d45d19",
             "label": "text_1",
-            "x": 380,
-            "y": 605,
+            "x": 350,
+            "y": 136,
             "text": "PRESS ANY KEY TO START",
             "fontSize": "36px",
             "fontStyle": "bold italic",
             "shadow.stroke": true,
             "shadow.fill": true,
+            "shadow.color": "#fbf7f7ff",
+            "shadow.blur": 2
+        },
+        {
+            "type": "Image",
+            "id": "b7d42179-90e7-4566-ac1c-56d3dbf4e136",
+            "label": "whale_left",
+            "texture": {
+                "key": "whale1"
+            },
+            "x": 71,
+            "y": 274
+        },
+        {
+            "type": "Image",
+            "id": "00b78097-01ce-486c-a8fb-3b16c3263b57",
+            "label": "whale_jump",
+            "texture": {
+                "key": "whale-jump2"
+            },
+            "x": 143,
+            "y": 565
+        },
+        {
+            "type": "Image",
+            "id": "5b95f959-68e7-4744-aea5-c5afc65bb6b6",
+            "label": "whale_right",
+            "texture": {
+                "key": "whale1"
+            },
+            "x": 246,
+            "y": 274,
+            "scaleX": -1
+        },
+        {
+            "type": "Image",
+            "id": "22d691de-b225-4650-a61e-451db52e9d4b",
+            "label": "whale_jump_1",
+            "texture": {
+                "key": "whale-tail2"
+            },
+            "x": 383,
+            "y": 563
+        },
+        {
+            "type": "Image",
+            "id": "a42f0997-5c1d-4918-846d-cf005d643d79",
+            "label": "whale_right_1",
+            "texture": {
+                "key": "waveattack"
+            },
+            "x": 1095,
+            "y": 346,
+            "scaleX": -1.2,
+            "scaleY": 1.2
+        },
+        {
+            "type": "Image",
+            "id": "817962e4-5244-479b-bc07-8c1533665896",
+            "label": "whale_right_2",
+            "texture": {
+                "key": "whale1"
+            },
+            "x": 1013,
+            "y": 356,
+            "scaleX": -1
+        },
+        {
+            "type": "Image",
+            "id": "3bce37e2-4625-48b3-bdab-05d62fd3d733",
+            "label": "whale_right_3",
+            "texture": {
+                "key": "enemy2-look"
+            },
+            "x": 1194,
+            "y": 351,
+            "scaleX": -1
+        },
+        {
+            "type": "Image",
+            "id": "843a1e17-af17-438e-a8cd-1d869deb6d32",
+            "label": "whale_right_5",
+            "texture": {
+                "key": "whale-inhale1"
+            },
+            "x": 1149,
+            "y": 552,
+            "scaleX": 1.5,
+            "scaleY": 1.5
+        },
+        {
+            "type": "Image",
+            "id": "6f7b9d68-047a-4afa-ac5d-9448b09b750b",
+            "label": "whale_right_6",
+            "texture": {
+                "key": "enemy2-stun"
+            },
+            "x": 1040,
+            "y": 596,
+            "scaleX": 0.5,
+            "scaleY": 0.5
+        },
+        {
+            "type": "Text",
+            "id": "49122e17-6e8c-4bf0-9636-b113cf6a0a3d",
+            "label": "instruction_text",
+            "x": 8,
+            "y": 205,
+            "text": "MOVE WITH LEFT/RIGHT ARROWS",
+            "fontSize": "22px",
+            "shadow.color": "#fbf7f7ff",
+            "shadow.blur": 2
+        },
+        {
+            "type": "Text",
+            "id": "73fa9bd0-0321-4716-8460-c39cdbe7cef3",
+            "label": "instruction_text_1",
+            "x": 8,
+            "y": 629,
+            "text": "JUMP WITH SPACEBAR  HIDE WITH DOWN ARROW",
+            "fontSize": "22px",
+            "shadow.color": "#fbf7f7ff",
+            "shadow.blur": 2
+        },
+        {
+            "type": "Text",
+            "id": "b793e395-3aac-4ac3-953d-74e33a375be8",
+            "label": "instruction_text_2",
+            "x": 930,
+            "y": 410,
+            "text": "USE Z TO RELEASE YOUR WAVE",
+            "fontSize": "22px",
+            "shadow.color": "#fbf7f7ff",
+            "shadow.blur": 2
+        },
+        {
+            "type": "Text",
+            "id": "af3d3a70-1607-440b-a145-dd120523d883",
+            "label": "instruction_text_3",
+            "x": 907,
+            "y": 481,
+            "text": "STUN ENEMIES WITH IT ...",
+            "fontSize": "22px",
+            "shadow.color": "#fbf7f7ff",
+            "shadow.blur": 2
+        },
+        {
+            "type": "Text",
+            "id": "dea9aace-55fb-4c72-b51e-e4d1193a988c",
+            "label": "instruction_text_4",
+            "x": 909,
+            "y": 633,
+            "text": "USE X TO INHALE THEM AND ",
+            "fontSize": "22px",
+            "shadow.color": "#fbf7f7ff",
+            "shadow.blur": 2
+        },
+        {
+            "type": "Text",
+            "id": "2dc0f201-5ed4-4962-9f87-a9d425d6acbd",
+            "label": "instruction_text_5",
+            "x": 884,
+            "y": 670,
+            "text": "SPIT THEM OUT WITH X AS WELL!",
+            "fontSize": "22px",
             "shadow.color": "#fbf7f7ff",
             "shadow.blur": 2
         }

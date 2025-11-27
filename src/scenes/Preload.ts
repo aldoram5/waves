@@ -18,11 +18,6 @@ export default class Preload extends Phaser.Scene {
 
 	editorCreate(): void {
 
-		// guapen
-		const guapen = this.add.image(505.0120544433594, 360, "guapen");
-		guapen.scaleX = 0.32715486817515643;
-		guapen.scaleY = 0.32715486817515643;
-
 		// progressBar
 		const progressBar = this.add.rectangle(553.0120849609375, 361, 256, 20);
 		progressBar.setOrigin(0, 0);
@@ -37,7 +32,7 @@ export default class Preload extends Phaser.Scene {
 
 		// loadingText
 		const loadingText = this.add.text(552.0120849609375, 329, "", {});
-		loadingText.text = "Loading...";
+		loadingText.text = "Loading W.A.V.E.S...";
 		loadingText.setStyle({ "color": "#e0e0e0", "fontFamily": "arial", "fontSize": "20px" });
 
 		this.progressBar = progressBar;
@@ -80,7 +75,7 @@ export default class Preload extends Phaser.Scene {
 			}
 		}
 
-		this.scene.start("Level");
+		this.scene.start("MainMenu");
 	}
 
 	/* END-USER-CODE */

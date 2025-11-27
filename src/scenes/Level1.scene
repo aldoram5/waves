@@ -1,0 +1,89 @@
+{
+    "id": "7a422e49-e877-4bfb-9577-1d1782ebf670",
+    "sceneType": "SCENE",
+    "settings": {
+        "exportClass": true,
+        "autoImport": true,
+        "preloadPackFiles": [],
+        "createMethodName": "editorCreate",
+        "sceneKey": "Level1",
+        "compilerOutputLanguage": "TYPE_SCRIPT",
+        "borderWidth": 1280,
+        "borderHeight": 720
+    },
+    "displayList": [
+        {
+            "type": "Rectangle",
+            "id": "adf5e8d2-038b-4960-a872-fad5a8f6582f",
+            "label": "floor",
+            "y": 675,
+            "scaleX": 10.014984733442693,
+            "scaleY": 0.35242533493618,
+            "originX": 0,
+            "originY": 0,
+            "isFilled": true,
+            "fillColor": "#000",
+            "strokeColor": "#22fe00",
+            "lineWidth": 5,
+            "isStroked": true,
+            "width": 128,
+            "height": 128
+        },
+        {
+            "type": "Rectangle",
+            "id": "6fac24f1-886e-408f-9fe1-c55103bd225d",
+            "label": "ceiling",
+            "scaleX": 10.014984733442693,
+            "scaleY": 0.35242533493618,
+            "originX": 0,
+            "originY": 0,
+            "isFilled": true,
+            "fillColor": "#000",
+            "strokeColor": "#22fe00",
+            "lineWidth": 5,
+            "isStroked": true,
+            "width": 128,
+            "height": 128
+        },
+        {
+            "type": "Rectangle",
+            "id": "65ad7516-704d-4894-8afa-91e2ae1f53f3",
+            "label": "leftwall",
+            "scaleX": 0.3,
+            "scaleY": 5.7,
+            "originX": 0,
+            "originY": 0,
+            "isFilled": true,
+            "fillColor": "#000",
+            "strokeColor": "#22fe00",
+            "lineWidth": 5,
+            "isStroked": true,
+            "width": 128,
+            "height": 128
+        },
+        {
+            "type": "Rectangle",
+            "id": "662dfceb-1b53-4ac3-96b4-d142e5add903",
+            "label": "leftwall_1",
+            "x": 1239,
+            "scaleX": 0.3,
+            "scaleY": 5.7,
+            "originX": 0,
+            "originY": 0,
+            "isFilled": true,
+            "fillColor": "#000",
+            "strokeColor": "#22fe00",
+            "lineWidth": 5,
+            "isStroked": true,
+            "width": 128,
+            "height": 128
+        }
+    ],
+    "plainObjects": [],
+    "meta": {
+        "app": "Phaser Editor - Scene Editor",
+        "url": "https://phaser.io/editor",
+        "contentType": "phasereditor2d.core.scene.SceneContentType",
+        "version": 5
+    }
+}

@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import Level from "./scenes/Level";
+import Level1 from "./scenes/Level1";
 import Preload from "./scenes/Preload";
 
 class Boot extends Phaser.Scene {
@@ -9,8 +9,6 @@ class Boot extends Phaser.Scene {
     }
 
     preload() {
-
-        this.load.pack("pack", "assets/preload-asset-pack.json");
     }
 
     create() {
@@ -30,7 +28,7 @@ window.addEventListener('load', function () {
 			mode: Phaser.Scale.ScaleModes.FIT,
 			autoCenter: Phaser.Scale.Center.CENTER_BOTH
 		},
-		scene: [Boot, Preload, Level]
+		scene: [Boot, Preload, Level1]
 	});
 
 	game.scene.start("Boot");
