@@ -43,7 +43,7 @@ export const FRAME_DURATIONS = {
     WAVE_SWAP: 20,           // Frames between wave1/wave2 swaps
     TAIL_SWAP: 15,           // Frames between tail1/tail2 swaps in HIDING state
     JUMP_START: 10,           // Duration of whale-jump1 at start of jump
-    JUMP_LANDING: 10,         // Duration of whale-jump3 on landing
+    JUMP_LANDING: 15,         // Duration of whale-jump3 on landing
     ATTACK_INHALE: 5,        // Duration of whale-inhale2 attack animation
     INHALE_SWAP: 12           // Frames between inhale1/inhale2 while inhaling
 };
@@ -56,6 +56,6 @@ export const PLAYER_PHYSICS = {
     MOVE_SPEED: 200,         // Horizontal velocity when moving (pixels/second)
     JUMP_VELOCITY: -460,     // Upward velocity on jump (negative is up, pixels/second)
     MAX_FALL_SPEED: 800,     // Terminal velocity when falling (pixels/second)
-    JUMP_HEIGHT: 130,        // Target jump height in pixels (approximate)
+    JUMP_HEIGHT: 130,        // Approximate jump height in pixels for reference only; not used in calculations or as a configurable parameter
     WAVE_OFFSET_Y: 5        // Vertical offset of wave sprite from whale position
 };

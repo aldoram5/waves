@@ -34,7 +34,7 @@ window.addEventListener('load', function () {
 			default: 'arcade',
 			arcade: {
 				gravity: { y: 800, x: 0 },
-				debug: true  // Enable debug rendering during development
+				debug: process.env.NODE_ENV === 'development' // Enable debug rendering during development
 			}
 		},
 		scene: [Boot, Preload, MainMenu, Level1]

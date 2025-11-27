@@ -135,12 +135,6 @@ export default class Level1 extends Phaser.Scene {
 				this
 			);
 		});
-
-		// Track platform contact for jumping/falling states
-		this.events.on('update', () => {
-			const body = this.player.body as Phaser.Physics.Arcade.Body;
-			this.player.setOnPlatform(body.blocked.down || body.touching.down);
-		});
 	}
 
 	/**
@@ -170,8 +164,8 @@ export default class Level1 extends Phaser.Scene {
 		player: Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
 		platform: Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
 	): boolean {
-		const playerBody = (player as any).body || player as Phaser.Physics.Arcade.Body;
-		const platformBody = (platform as any).body || platform as Phaser.Physics.Arcade.StaticBody;
+		const playerBody = 'body' in player ? player.body as Phaser.Physics.Arcade.Body : player as Phaser.Physics.Arcade.Body;
+		const platformBody = 'body' in platform ? platform.body as Phaser.Physics.Arcade.StaticBody : platform as Phaser.Physics.Arcade.StaticBody;
 
 		// Get the bottom of the player's collision box (previous frame position)
 		const playerPrevBottom = playerBody.prev.y + playerBody.height;
@@ -183,10 +177,14 @@ export default class Level1 extends Phaser.Scene {
 		// 1. Player is falling or stationary (velocity.y >= 0)
 		// 2. Player's PREVIOUS bottom position was above the platform top
 		// This allows jumping through from below while landing from above
+		// A small tolerance (+5 pixels) is added to account for minor inaccuracies
 		return playerBody.velocity.y >= 0 && playerPrevBottom <= platformTop + 5;
 	}
 
 	update() {
+		// Track platform contact for jumping/falling states
+		const body = this.player.body as Phaser.Physics.Arcade.Body;
+		this.player.setOnPlatform(body.blocked.down || body.touching.down);
 		// Update player state machine and animations
 		this.player?.update();
 	}

@@ -56,12 +56,14 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         // Add to scene and enable physics
         scene.add.existing(this);
         scene.physics.add.existing(this);
+        this.setDepth(10); // Player on top
 
         // Configure physics body
         this.setupPhysicsBody();
 
         // Create wave sprite (separate game object)
         this.waveSprite = scene.add.sprite(x, y + PLAYER_PHYSICS.WAVE_OFFSET_Y, 'wave1');
+        this.waveSprite.setDepth(9); // Wave below player
         this.waveStartX = x;
         this.waveY = y + PLAYER_PHYSICS.WAVE_OFFSET_Y; // Wave stays at platform level
 
@@ -109,7 +111,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         body.setDrag(600, 0);
 
         // Limit horizontal speed, allow full gravity
-        body.setMaxVelocity(300, 1000);
+        body.setMaxVelocity(300, PLAYER_PHYSICS.MAX_FALL_SPEED);
     }
 
     /**
@@ -157,7 +159,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         }
 
         // ATTACKING state - Z key just pressed
-        if (this.zKey && Phaser.Input.Keyboard.JustDown(this.zKey)) {
+        // Player can only attack when not jumping or falling
+        if (this.zKey && Phaser.Input.Keyboard.JustDown(this.zKey) && this.currentState !== PlayerState.JUMPING && this.currentState !== PlayerState.FALLING) {
             return PlayerState.ATTACKING;
         }
 
@@ -170,7 +173,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         }
 
         // INHALING state - X key held down
-        if (this.xKey && this.xKey.isDown) {
+        // Player can only inhale when not jumping or falling
+        if (this.xKey && this.xKey.isDown && this.currentState !== PlayerState.JUMPING && this.currentState !== PlayerState.FALLING) {
             return PlayerState.INHALING;
         }
 
@@ -179,20 +183,30 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             this.isOnPlatform && this.currentState !== PlayerState.JUMPING) {
             return PlayerState.JUMPING;
         }
-
+        // Extra check to ensure jump state remains active while ascending
+        // we check -1 to allow for minor floating point inaccuracies
+        if (body.velocity.y < -1){
+            return PlayerState.JUMPING;
+        }
         // JUMPING state continuation - stay in state until landing completes
-        if (this.currentState === PlayerState.JUMPING) {
-            // Still in jump if not on platform, or if landing animation playing
+        // FALLING state transitions to JUMPING if landing animation is playing
+        if (this.currentState === PlayerState.JUMPING || this.currentState === PlayerState.FALLING) {
+            // Still in jump/fall if not on platform, or if landing animation playing
             if (!this.isOnPlatform || this.jumpPhase === 'landing') {
-                return PlayerState.JUMPING;
+                // Ternary to distinguish between JUMPING and FALLING phases
+                // we check -1 to allow for minor floating point inaccuracies
+                return body.velocity.y > -1 ? PlayerState.FALLING : PlayerState.JUMPING;
             }
             // Landing complete, fall through to other states
         }
 
         // FALLING state - not on platform and moving downward
-        // Don't enter FALLING if we just jumped (handle jump arc separately)
-        if (!this.isOnPlatform && body.velocity.y > 0 &&
-            this.currentState !== PlayerState.JUMPING) {
+        if (!this.isOnPlatform && body.velocity.y > 0 ) {
+            return PlayerState.FALLING;
+        }
+
+        // We just landed - if we were FALLING, stay on FALLING to play landing animation
+        if (this.isOnPlatform && (this.currentState === PlayerState.FALLING) && (this.jumpPhase !== null)) {
             return PlayerState.FALLING;
         }
 
@@ -260,6 +274,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
                 // Set falling texture (whale-jump2 upside down)
                 this.setTexture('whale-jump2');
                 this.setFlipY(true); // Flip vertically (scaleY = -1)
+                // Ensure jumpPhase is set to air if falling without jumping
+                if (this.jumpPhase === null) {
+                    this.jumpPhase = 'air';
+                }
                 break;
 
             case PlayerState.ATTACKING:
@@ -299,12 +317,12 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
                 break;
 
             case PlayerState.JUMPING:
-                // Reset jump tracking
-                this.jumpPhase = null;
                 this.landingFrameCount = 0;
                 break;
 
             case PlayerState.FALLING:
+                // Reset jump tracking
+                this.jumpPhase = null;
                 // Reset vertical flip
                 this.setFlipY(false);
                 break;
@@ -339,8 +357,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     private updateState(state: PlayerState): void {
         const body = this.body as Phaser.Physics.Arcade.Body;
 
-        // Horizontal movement allowed in most states (except DYING)
-        if (state !== PlayerState.DYING) {
+        // Horizontal movement allowed in most states (except DYING, HIDING, ATTACKING)
+        if (state !== PlayerState.DYING && state !== PlayerState.HIDING && state !== PlayerState.ATTACKING) {
             this.handleHorizontalMovement();
         }
 
@@ -356,12 +374,13 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
                 break;
 
             case PlayerState.HIDING:
-                // Prevent horizontal movement while hiding
-                body.setVelocityX(0);
                 // Tail animation handled in updateAnimations()
                 break;
 
             case PlayerState.JUMPING:
+                // Gravity handles downward velocity
+                // Horizontal movement allowed
+                // Update jump/fall logic
                 this.updateJumpState();
                 break;
 
@@ -369,11 +388,15 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
                 // Gravity handles downward velocity
                 // Horizontal movement allowed
                 // Landing detection handled in evaluateState
+                // Update jump/fall logic
+                this.updateJumpState();
+                // Keep upright during landing
+                if (this.jumpPhase === 'landing') {
+                    this.setFlipY(false); 
+                }
                 break;
 
             case PlayerState.ATTACKING:
-                // Hold position during attack
-                body.setVelocityX(0);
                 // Attack animation duration handled in evaluateState
                 break;
 
@@ -419,7 +442,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
         switch (this.jumpPhase) {
             case 'start':
-                // whale-jump1 plays for exactly JUMP_START frames (5)
+                // whale-jump1 plays for exactly JUMP_START frames (10)
                 if (this.frameCounter >= FRAME_DURATIONS.JUMP_START) {
                     this.jumpPhase = 'air';
                     this.setTexture('whale-jump2');
@@ -430,7 +453,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             case 'air':
                 // whale-jump2 continues until player lands on platform
                 // Landing detected by collision callback setting isOnPlatform = true
-                if (this.isOnPlatform && body.velocity.y >= 0) {
+                if (this.isOnPlatform) {
                     this.jumpPhase = 'landing';
                     this.setTexture('whale-jump3');
                     this.frameCounter = 0;
@@ -439,10 +462,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
                 break;
 
             case 'landing':
-                // whale-jump3 plays for exactly JUMP_LANDING frames (5)
+                // whale-jump3 plays for exactly JUMP_LANDING frames (15)
                 this.landingFrameCount++;
                 if (this.landingFrameCount >= FRAME_DURATIONS.JUMP_LANDING) {
                     // Landing complete - evaluateState will transition to IDLE/MOVING
+                    this.jumpPhase = null;
                 }
                 break;
         }
@@ -557,7 +581,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
      * Swaps textures every INHALE_SWAP frames (8 frames at 60fps = 0.13 seconds).
      */
     private animateInhale(): void {
-        // Swap every 8 frames (faster breathing effect)
+        // Swap every 12 frames (faster breathing effect)
         if (this.frameCounter % FRAME_DURATIONS.INHALE_SWAP === 0 && this.frameCounter > 0) {
             this.currentWhaleFrame = 1 - this.currentWhaleFrame; // Toggle 0/1
             const texture = this.currentWhaleFrame === 0 ? 'whale-inhale1' : 'whale-inhale2';
@@ -649,5 +673,15 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             this.currentState = PlayerState.DYING;
             this.enterState(PlayerState.DYING);
         }
+    }
+
+    /**
+     * Clean up resources when player is destroyed.
+     * Ensures wave sprite is also destroyed to prevent memory leaks.
+     */
+    destroy(fromScene?: boolean): void {
+        // Clean up wave sprite
+        this.waveSprite.destroy(fromScene);
+        super.destroy(fromScene);
     }
 }
