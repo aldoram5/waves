@@ -12,6 +12,9 @@ import EnemyProjectile from '../gameobjects/EnemyProjectile';
 
 export default class Level1 extends Phaser.Scene {
 
+	private turretFiredProjectileCallback: (projectile: EnemyProjectile) => void;
+	private playerDiedCallback: () => void;
+	
 	constructor() {
 		super("Level1");
 
@@ -209,8 +212,7 @@ export default class Level1 extends Phaser.Scene {
 			);
 		});
 
-		// Listen for projectile firing events from turrets
-		this.events.on('turret-fired-projectile', (projectile: EnemyProjectile) => {
+		this.turretFiredProjectileCallback = (projectile: EnemyProjectile) => {
 			this.projectiles.push(projectile);
 			// Store colliders/overlaps for cleanup
 			const colliders: Phaser.Physics.Arcade.Collider[] = [];
@@ -258,12 +260,17 @@ export default class Level1 extends Phaser.Scene {
 					this.projectiles.splice(index, 1);
 				}
 			});
-		});
+		};
 
-		// Listen for player death event to trigger respawn
-		this.events.on('player-died', () => {
+		// Listen for projectile firing events from turrets
+		this.events.on('turret-fired-projectile', this.turretFiredProjectileCallback);
+		this.playerDiedCallback = () => {
 			this.player.respawn();
-		});
+		}
+		// Listen for player death event to trigger respawn
+		this.events.on('player-died', this.playerDiedCallback);
+		// Listen for the scene shutdown event to perform cleanup
+		this.events.once('shutdown', this.cleanup, this);
 	}
 
 	/**
@@ -372,6 +379,11 @@ export default class Level1 extends Phaser.Scene {
 		// Projectiles are velocity-based, no update needed
 	}
 
+	cleanup(): void {
+		// Cleanup turret projectile event listener
+		this.events.off('turret-fired-projectile', this.turretFiredProjectileCallback);
+		this.events.off('player-died', this.playerDiedCallback);
+	}
 	/* END-USER-CODE */
 }
 
