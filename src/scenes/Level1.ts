@@ -5,6 +5,7 @@
 
 /* START-USER-IMPORTS */
 import Player from '../gameobjects/Player';
+import Enemy from '../gameobjects/Enemy';
 /* END-USER-IMPORTS */
 
 export default class Level1 extends Phaser.Scene {
@@ -64,7 +65,7 @@ export default class Level1 extends Phaser.Scene {
 		rightwall.lineWidth = 5;
 
 		// platform1
-		const platform1 = this.add.rectangle(43, 575, 128, 128);
+		const platform1 = this.add.rectangle(43, 515, 128, 128);
 		platform1.scaleX = 7;
 		platform1.scaleY = 0.35242533493618;
 		platform1.setOrigin(0, 0);
@@ -75,7 +76,7 @@ export default class Level1 extends Phaser.Scene {
 		platform1.lineWidth = 5;
 
 		// platform2
-		const platform2 = this.add.rectangle(345, 458, 128, 128);
+		const platform2 = this.add.rectangle(348, 355, 128, 128);
 		platform2.scaleX = 7;
 		platform2.scaleY = 0.35242533493618;
 		platform2.setOrigin(0, 0);
@@ -91,6 +92,7 @@ export default class Level1 extends Phaser.Scene {
 	/* START-USER-CODE */
 
 	private player!: Player;
+	private enemies: Enemy[] = [];
 
 	create() {
 		this.editorCreate();
@@ -134,6 +136,31 @@ export default class Level1 extends Phaser.Scene {
 				this.oneWayPlatformCheck, // Process callback for one-way collision
 				this
 			);
+		});
+
+		// Create test enemies on platforms
+		// Pass all platforms to enemies for edge detection
+		// Enemy on platform1 (middle-left platform at y=575)
+		const enemy1 = new Enemy(this, 500, 530, platforms);
+		this.enemies.push(enemy1);
+
+		// Enemy on platform2 (upper-right platform at y=458)
+		const enemy2 = new Enemy(this, 700, 413, platforms);
+		this.enemies.push(enemy2);
+
+		// Setup enemy collisions with platforms
+		this.enemies.forEach(enemy => {
+			// Solid collisions for floor, ceiling, and walls
+			if (floor) this.physics.add.collider(enemy, floor);
+			if (ceiling) this.physics.add.collider(enemy, ceiling);
+			walls.forEach(wall => {
+				this.physics.add.collider(enemy, wall);
+			});
+
+			// One-way platform collisions for middle platforms
+			oneWayPlatforms.forEach(platform => {
+				this.physics.add.collider(enemy, platform);
+			});
 		});
 	}
 
@@ -187,6 +214,11 @@ export default class Level1 extends Phaser.Scene {
 		this.player.setOnPlatform(body.blocked.down || body.touching.down);
 		// Update player state machine and animations
 		this.player?.update();
+
+		// Update enemies
+		this.enemies.forEach(enemy => {
+			enemy.update();
+		});
 	}
 
 	/* END-USER-CODE */
