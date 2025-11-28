@@ -97,8 +97,8 @@ export default class TurretEnemy extends BaseEnemy {
         this.isFacingLeft = this.player.x < this.x;
 
         // Flip sprite toward player
-        // setFlipX(false) = facing left (default)
-        // setFlipX(true) = facing right (flipped)
+        // setFlipX(true) = facing left (flipped)
+        // setFlipX(false) = facing right (default)
         this.setFlipX(this.isFacingLeft);
 
         // 3. Update sprite based on range

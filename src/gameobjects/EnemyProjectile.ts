@@ -18,6 +18,7 @@ export default class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
 
     // Movement constant
     private static readonly SPEED = 250; // pixels/second
+    private worldBoundsCallback: (worldBody: Phaser.Physics.Arcade.Body) => void;
 
     /**
      * Create a new enemy projectile.
@@ -69,13 +70,16 @@ export default class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
         // Enable world bounds collision for auto-destroy
         body.setCollideWorldBounds(true);
         body.onWorldBounds = true;
-
-        // Listen for world bounds collision
-        this.scene.physics.world.on('worldbounds', (worldBody: Phaser.Physics.Arcade.Body) => {
+        
+        // Setup world bounds callback
+        this.worldBoundsCallback = (worldBody: Phaser.Physics.Arcade.Body) => {
             if (worldBody.gameObject === this) {
                 this.destroyProjectile();
             }
-        }, this);
+        };
+        // Listen for world bounds collision
+        this.scene.physics.world.on('worldbounds', this.worldBoundsCallback, this);
+        
     }
 
     /**
@@ -99,7 +103,7 @@ export default class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
      */
     destroy(fromScene?: boolean): void {
         // Remove world bounds listener
-        this.scene.physics.world.off('worldbounds', undefined, this);
+        this.scene.physics.world.off('worldbounds', this.worldBoundsCallback, this);
 
         super.destroy(fromScene);
     }

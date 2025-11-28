@@ -88,16 +88,16 @@ export default class Level1 extends Phaser.Scene {
 		platform2.strokeColor = 2293248;
 		platform2.lineWidth = 5;
 
-		// platform
-		const platform = this.add.rectangle(43, 195, 128, 128);
-		platform.scaleX = 7;
-		platform.scaleY = 0.35242533493618;
-		platform.setOrigin(0, 0);
-		platform.isFilled = true;
-		platform.fillColor = 0;
-		platform.isStroked = true;
-		platform.strokeColor = 2293248;
-		platform.lineWidth = 5;
+		// platform3
+		const platform3 = this.add.rectangle(43, 195, 128, 128);
+		platform3.scaleX = 7;
+		platform3.scaleY = 0.35242533493618;
+		platform3.setOrigin(0, 0);
+		platform3.isFilled = true;
+		platform3.fillColor = 0;
+		platform3.isStroked = true;
+		platform3.strokeColor = 2293248;
+		platform3.lineWidth = 5;
 
 		this.events.emit("scene-awake");
 	}
@@ -164,11 +164,11 @@ export default class Level1 extends Phaser.Scene {
 		this.patrolEnemies.push(enemy2);
 
 		// Create turret enemies at strategic positions
-		// Turret on floor (bottom level)
+		// Turret on middle-right platform
 		const turret1 = new TurretEnemy(this, 900, 465, this.player);
 		this.turretEnemies.push(turret1);
 
-		// Turret on platform1 (middle-left platform)
+		// Turret on platform1 (top most platform on the left)
 		const turret2 = new TurretEnemy(this, 300, 145, this.player);
 		this.turretEnemies.push(turret2);
 
