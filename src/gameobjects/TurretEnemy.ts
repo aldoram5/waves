@@ -19,10 +19,19 @@ import EnemyProjectile from './EnemyProjectile';
  */
 export default class TurretEnemy extends BaseEnemy {
 
-    // Constants
-    private static readonly Y_DETECTION_RANGE = 50;      // pixels
-    private static readonly PROJECTILE_SPEED = 250;      // pixels/second (for reference)
-    private static readonly SHOOT_COOLDOWN = 500;        // milliseconds (0.5 seconds)
+    // Detection and attack constants
+    private static readonly Y_DETECTION_RANGE = 50;      // Y-axis detection range in pixels
+    private static readonly PROJECTILE_SPEED = 250;      // Projectile speed in pixels/second (for reference)
+    private static readonly SHOOT_COOLDOWN = 500;        // Cooldown after shot (milliseconds)
+
+    // Collision box constants
+    private static readonly BODY_WIDTH = 100;  // Collision box width
+    private static readonly BODY_HEIGHT = 100; // Collision box height
+    private static readonly BODY_OFFSET_X = 14; // X offset to center collision box
+    private static readonly BODY_OFFSET_Y = 20; // Y offset to position collision box
+
+    // Visual constants
+    private static readonly DEPTH = 5; // Render depth (same as other enemies)
 
     // Player reference for tracking
     private player: Player;
@@ -70,8 +79,8 @@ export default class TurretEnemy extends BaseEnemy {
         const body = this.body as Phaser.Physics.Arcade.Body;
 
         // Turret sprite is 128x128, set collision box
-        body.setSize(100, 100);
-        body.setOffset(14, 20);
+        body.setSize(TurretEnemy.BODY_WIDTH, TurretEnemy.BODY_HEIGHT);
+        body.setOffset(TurretEnemy.BODY_OFFSET_X, TurretEnemy.BODY_OFFSET_Y);
 
         // Turret is stationary
         body.setImmovable(true);
@@ -81,7 +90,7 @@ export default class TurretEnemy extends BaseEnemy {
         body.setAllowGravity(false);
 
         // Set depth layer
-        this.setDepth(5); // Same as other enemies
+        this.setDepth(TurretEnemy.DEPTH); // Same as other enemies
     }
 
     /**
@@ -115,14 +124,16 @@ export default class TurretEnemy extends BaseEnemy {
     /**
      * Update logic specific to STUNNED state.
      * Turret stops tracking and cannot shoot while stunned.
-     * Reserved for future wave attack mechanic implementation.
+     * Calls base class to decrement stun timer.
      */
     protected updateStunnedState(): void {
-        // Ensure idle sprite while stunned
+        // Call base class to decrement stun timer
+        super.updateStunnedState();
+
+        // Ensure stun sprite while stunned
         this.setTexture('enemy2-stun');
 
-        // No shooting while stunned
-        // TODO: Add stun duration timer and transition back to NORMAL after timeout
+        // No shooting or tracking while stunned
     }
 
     /**
@@ -148,7 +159,7 @@ export default class TurretEnemy extends BaseEnemy {
     protected enterStunnedState(): void {
         this.setTexture('enemy2-stun');
 
-        // TODO: Start stun timer
+        // Stun timer is set by base class stun() method
     }
 
     /**
@@ -157,6 +168,7 @@ export default class TurretEnemy extends BaseEnemy {
      */
     protected exitStunnedState(): void {
         this.setTexture('enemy2');
+        this.setVelocityX(0); // Ensure stationary
     }
 
     /**
@@ -214,6 +226,29 @@ export default class TurretEnemy extends BaseEnemy {
         }
 
         return true;
+    }
+
+    /**
+     * Setup when entering DYING state.
+     * Destroys active projectile before calling base implementation.
+     */
+    protected enterDyingState(): void {
+        // Destroy active projectile if it exists
+        if (this.activeProjectile) {
+            this.activeProjectile.destroyProjectile();
+            this.activeProjectile = null;
+        }
+
+        // Call base implementation for common death setup
+        super.enterDyingState();
+    }
+
+    /**
+     * Cleanup when exiting DYING state.
+     * Called right before turret is destroyed.
+     */
+    protected exitDyingState(): void {
+        // No specific cleanup needed for turret enemy
     }
 
     /**

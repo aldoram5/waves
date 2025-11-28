@@ -14,27 +14,8 @@
     "displayList": [
         {
             "type": "Rectangle",
-            "id": "adf5e8d2-038b-4960-a872-fad5a8f6582f",
-            "label": "floor",
-            "y": 675,
-            "scaleX": 10.014984733442693,
-            "scaleY": 0.35242533493618,
-            "originX": 0,
-            "originY": 0,
-            "isFilled": true,
-            "fillColor": "#000",
-            "strokeColor": "#22fe00",
-            "lineWidth": 5,
-            "isStroked": true,
-            "width": 128,
-            "height": 128
-        },
-        {
-            "type": "Rectangle",
             "id": "6fac24f1-886e-408f-9fe1-c55103bd225d",
             "label": "ceiling",
-            "scaleX": 10.014984733442693,
-            "scaleY": 0.35242533493618,
             "originX": 0,
             "originY": 0,
             "isFilled": true,
@@ -42,15 +23,13 @@
             "strokeColor": "#22fe00",
             "lineWidth": 5,
             "isStroked": true,
-            "width": 128,
-            "height": 128
+            "width": 1280,
+            "height": 40
         },
         {
             "type": "Rectangle",
             "id": "65ad7516-704d-4894-8afa-91e2ae1f53f3",
             "label": "leftwall",
-            "scaleX": 0.3,
-            "scaleY": 5.7,
             "originX": 0,
             "originY": 0,
             "isFilled": true,
@@ -58,16 +37,14 @@
             "strokeColor": "#22fe00",
             "lineWidth": 5,
             "isStroked": true,
-            "width": 128,
-            "height": 128
+            "width": 40,
+            "height": 720
         },
         {
             "type": "Rectangle",
             "id": "662dfceb-1b53-4ac3-96b4-d142e5add903",
             "label": "rightwall",
             "x": 1239,
-            "scaleX": 0.3,
-            "scaleY": 5.7,
             "originX": 0,
             "originY": 0,
             "isFilled": true,
@@ -75,8 +52,8 @@
             "strokeColor": "#22fe00",
             "lineWidth": 5,
             "isStroked": true,
-            "width": 128,
-            "height": 128
+            "width": 40,
+            "height": 720
         },
         {
             "type": "Rectangle",
@@ -84,8 +61,6 @@
             "label": "platform1",
             "x": 43,
             "y": 515,
-            "scaleX": 7,
-            "scaleY": 0.35242533493618,
             "originX": 0,
             "originY": 0,
             "isFilled": true,
@@ -93,8 +68,8 @@
             "strokeColor": "#22fe00",
             "lineWidth": 5,
             "isStroked": true,
-            "width": 128,
-            "height": 128
+            "width": 890,
+            "height": 40
         },
         {
             "type": "Rectangle",
@@ -102,8 +77,6 @@
             "label": "platform2",
             "x": 348,
             "y": 355,
-            "scaleX": 7,
-            "scaleY": 0.35242533493618,
             "originX": 0,
             "originY": 0,
             "isFilled": true,
@@ -111,8 +84,8 @@
             "strokeColor": "#22fe00",
             "lineWidth": 5,
             "isStroked": true,
-            "width": 128,
-            "height": 128
+            "width": 890,
+            "height": 40
         },
         {
             "type": "Rectangle",
@@ -120,8 +93,6 @@
             "label": "platform3",
             "x": 43,
             "y": 195,
-            "scaleX": 7,
-            "scaleY": 0.35242533493618,
             "originX": 0,
             "originY": 0,
             "isFilled": true,
@@ -129,8 +100,23 @@
             "strokeColor": "#22fe00",
             "lineWidth": 5,
             "isStroked": true,
-            "width": 128,
-            "height": 128
+            "width": 890,
+            "height": 40
+        },
+        {
+            "type": "Rectangle",
+            "id": "2dd0358d-3a01-46b5-8ac6-60553a7cd252",
+            "label": "floor",
+            "y": 680,
+            "originX": 0,
+            "originY": 0,
+            "isFilled": true,
+            "fillColor": "#000",
+            "strokeColor": "#22fe00",
+            "lineWidth": 4,
+            "isStroked": true,
+            "width": 1280,
+            "height": 40
         }
     ],
     "plainObjects": [],
