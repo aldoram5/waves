@@ -5,11 +5,16 @@
 
 /* START-USER-IMPORTS */
 import Player from '../gameobjects/Player';
-import Enemy from '../gameobjects/Enemy';
+import PatrolEnemy from '../gameobjects/PatrolEnemy';
+import TurretEnemy from '../gameobjects/TurretEnemy';
+import EnemyProjectile from '../gameobjects/EnemyProjectile';
 /* END-USER-IMPORTS */
 
 export default class Level1 extends Phaser.Scene {
 
+	private turretFiredProjectileCallback: (projectile: EnemyProjectile) => void;
+	private playerDiedCallback: () => void;
+	
 	constructor() {
 		super("Level1");
 
@@ -86,13 +91,26 @@ export default class Level1 extends Phaser.Scene {
 		platform2.strokeColor = 2293248;
 		platform2.lineWidth = 5;
 
+		// platform3
+		const platform3 = this.add.rectangle(43, 195, 128, 128);
+		platform3.scaleX = 7;
+		platform3.scaleY = 0.35242533493618;
+		platform3.setOrigin(0, 0);
+		platform3.isFilled = true;
+		platform3.fillColor = 0;
+		platform3.isStroked = true;
+		platform3.strokeColor = 2293248;
+		platform3.lineWidth = 5;
+
 		this.events.emit("scene-awake");
 	}
 
 	/* START-USER-CODE */
 
 	private player!: Player;
-	private enemies: Enemy[] = [];
+	private patrolEnemies: PatrolEnemy[] = [];
+	private turretEnemies: TurretEnemy[] = [];
+	private projectiles: EnemyProjectile[] = [];
 
 	create() {
 		this.editorCreate();
@@ -138,18 +156,27 @@ export default class Level1 extends Phaser.Scene {
 			);
 		});
 
-		// Create test enemies on platforms
+		// Create patrol enemies on platforms
 		// Pass all platforms to enemies for edge detection
 		// Enemy on platform1 (middle-left platform at y=575)
-		const enemy1 = new Enemy(this, 500, 530, platforms);
-		this.enemies.push(enemy1);
+		const enemy1 = new PatrolEnemy(this, 500, 530, platforms);
+		this.patrolEnemies.push(enemy1);
 
 		// Enemy on platform2 (upper-right platform at y=458)
-		const enemy2 = new Enemy(this, 700, 413, platforms);
-		this.enemies.push(enemy2);
+		const enemy2 = new PatrolEnemy(this, 700, 413, platforms);
+		this.patrolEnemies.push(enemy2);
 
-		// Setup enemy collisions with platforms
-		this.enemies.forEach(enemy => {
+		// Create turret enemies at strategic positions
+		// Turret on middle-right platform
+		const turret1 = new TurretEnemy(this, 900, 465, this.player);
+		this.turretEnemies.push(turret1);
+
+		// Turret on platform1 (top most platform on the left)
+		const turret2 = new TurretEnemy(this, 300, 145, this.player);
+		this.turretEnemies.push(turret2);
+
+		// Setup patrol enemy collisions with platforms
+		this.patrolEnemies.forEach(enemy => {
 			// Solid collisions for floor, ceiling, and walls
 			if (floor) this.physics.add.collider(enemy, floor);
 			if (ceiling) this.physics.add.collider(enemy, ceiling);
@@ -173,10 +200,77 @@ export default class Level1 extends Phaser.Scene {
 			);
 		});
 
-		// Listen for player death event to trigger respawn
-		this.events.on('player-died', () => {
-			this.player.respawn();
+		// Setup turret enemy collisions (only player overlap, no platform collisions)
+		this.turretEnemies.forEach(turret => {
+			// Turret-player collision detection
+			this.physics.add.overlap(
+				this.player,
+				turret,
+				undefined,
+				this.checkEnemyPlayerCollision,
+				this
+			);
 		});
+
+		this.turretFiredProjectileCallback = (projectile: EnemyProjectile) => {
+			this.projectiles.push(projectile);
+			// Store colliders/overlaps for cleanup
+			const colliders: Phaser.Physics.Arcade.Collider[] = [];
+
+			// Projectile-platform collisions (destroy projectile on hit)
+			if (floor) {
+				colliders.push(this.physics.add.collider(projectile, floor, () => {
+					projectile.destroyProjectile();
+				}));
+			}
+			if (ceiling) {
+				colliders.push(this.physics.add.collider(projectile, ceiling, () => {
+					projectile.destroyProjectile();
+				}));
+			}
+			walls.forEach(wall => {
+				colliders.push(this.physics.add.collider(projectile, wall, () => {
+					projectile.destroyProjectile();
+				}));
+			});
+			oneWayPlatforms.forEach(platform => {
+				colliders.push(this.physics.add.collider(projectile, platform, () => {
+					projectile.destroyProjectile();
+				}));
+			});
+
+			// Projectile-player overlap (kill player unless hiding)
+			colliders.push(
+				this.physics.add.overlap(
+					this.player,
+					projectile,
+					() => {
+						projectile.destroyProjectile();
+					},
+					this.checkProjectilePlayerCollision,
+					this
+				)
+			);
+
+			// Cleanup projectile from array when destroyed
+			projectile.on('projectile-destroyed', () => {
+				colliders.forEach(c => c.destroy());
+				const index = this.projectiles.indexOf(projectile);
+				if (index > -1) {
+					this.projectiles.splice(index, 1);
+				}
+			});
+		};
+
+		// Listen for projectile firing events from turrets
+		this.events.on('turret-fired-projectile', this.turretFiredProjectileCallback);
+		this.playerDiedCallback = () => {
+			this.player.respawn();
+		}
+		// Listen for player death event to trigger respawn
+		this.events.on('player-died', this.playerDiedCallback);
+		// Listen for the scene shutdown event to perform cleanup
+		this.events.once('shutdown', this.cleanup, this);
 	}
 
 	/**
@@ -205,6 +299,27 @@ export default class Level1 extends Phaser.Scene {
 	private checkEnemyPlayerCollision(
 		player: Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
 		enemy: Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
+	): boolean {
+		// Only kill player if NOT hiding
+		if (!this.player.isHiding()) {
+			this.player.die();
+		}
+		// Return false to avoid physical collision (no pushing/bouncing)
+		return false;
+	}
+
+	/**
+	 * Process callback for projectile-player collision.
+	 * Only triggers player death if player is NOT hiding.
+	 * Projectile is destroyed in the collision callback.
+	 *
+	 * @param player The player body or game object
+	 * @param projectile The projectile body or game object
+	 * @returns False to avoid physical collision
+	 */
+	private checkProjectilePlayerCollision(
+		player: Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
+		projectile: Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
 	): boolean {
 		// Only kill player if NOT hiding
 		if (!this.player.isHiding()) {
@@ -251,12 +366,24 @@ export default class Level1 extends Phaser.Scene {
 		// Update player state machine and animations
 		this.player?.update();
 
-		// Update enemies
-		this.enemies.forEach(enemy => {
+		// Update patrol enemies
+		this.patrolEnemies.forEach(enemy => {
 			enemy.update();
 		});
+
+		// Update turret enemies
+		this.turretEnemies.forEach(turret => {
+			turret.update();
+		});
+
+		// Projectiles are velocity-based, no update needed
 	}
 
+	cleanup(): void {
+		// Cleanup turret projectile event listener
+		this.events.off('turret-fired-projectile', this.turretFiredProjectileCallback);
+		this.events.off('player-died', this.playerDiedCallback);
+	}
 	/* END-USER-CODE */
 }
 
