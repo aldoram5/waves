@@ -59,8 +59,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
     // Swallow/Inhale system
     private swallowManager: SwallowManager;
-    private inhaleSuctionRadius: number = 200; // Detection range in pixels
-    private inhaleSuctionPower: number = 15; // Pull strength per frame
+    public static INHALE_SUCTION_RADIUS: number = 200; // Detection range in pixels
+    public static INHALE_SUCTION_POWER: number = 50; // Pull strength per frame
+    public static SWALLOW_DISTANCE_THRESHOLD: number = 80; // Distance to consider enemy swallowed
 
     // Spit timer system
     private spitTimer: number = 0;

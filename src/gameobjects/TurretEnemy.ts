@@ -168,6 +168,7 @@ export default class TurretEnemy extends BaseEnemy {
      */
     protected exitStunnedState(): void {
         this.setTexture('enemy2');
+        this.setVelocityX(0); // Ensure stationary
     }
 
     /**

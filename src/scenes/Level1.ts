@@ -15,9 +15,6 @@ import { EnemyState } from '../gameobjects/EnemyStates';
 
 export default class Level1 extends Phaser.Scene {
 
-	private turretFiredProjectileCallback: (projectile: EnemyProjectile) => void;
-	private playerDiedCallback: () => void;
-	
 	constructor() {
 		super("Level1");
 
@@ -28,21 +25,8 @@ export default class Level1 extends Phaser.Scene {
 
 	editorCreate(): void {
 
-		// floor
-		const floor = this.add.rectangle(0, 675, 128, 128);
-		floor.scaleX = 10.014984733442693;
-		floor.scaleY = 0.35242533493618;
-		floor.setOrigin(0, 0);
-		floor.isFilled = true;
-		floor.fillColor = 0;
-		floor.isStroked = true;
-		floor.strokeColor = 2293248;
-		floor.lineWidth = 5;
-
 		// ceiling
-		const ceiling = this.add.rectangle(0, 0, 128, 128);
-		ceiling.scaleX = 10.014984733442693;
-		ceiling.scaleY = 0.35242533493618;
+		const ceiling = this.add.rectangle(0, 0, 1280, 40);
 		ceiling.setOrigin(0, 0);
 		ceiling.isFilled = true;
 		ceiling.fillColor = 0;
@@ -51,9 +35,7 @@ export default class Level1 extends Phaser.Scene {
 		ceiling.lineWidth = 5;
 
 		// leftwall
-		const leftwall = this.add.rectangle(0, 0, 128, 128);
-		leftwall.scaleX = 0.3;
-		leftwall.scaleY = 5.7;
+		const leftwall = this.add.rectangle(0, 0, 40, 720);
 		leftwall.setOrigin(0, 0);
 		leftwall.isFilled = true;
 		leftwall.fillColor = 0;
@@ -62,9 +44,7 @@ export default class Level1 extends Phaser.Scene {
 		leftwall.lineWidth = 5;
 
 		// rightwall
-		const rightwall = this.add.rectangle(1239, 0, 128, 128);
-		rightwall.scaleX = 0.3;
-		rightwall.scaleY = 5.7;
+		const rightwall = this.add.rectangle(1239, 0, 40, 720);
 		rightwall.setOrigin(0, 0);
 		rightwall.isFilled = true;
 		rightwall.fillColor = 0;
@@ -73,9 +53,7 @@ export default class Level1 extends Phaser.Scene {
 		rightwall.lineWidth = 5;
 
 		// platform1
-		const platform1 = this.add.rectangle(43, 515, 128, 128);
-		platform1.scaleX = 7;
-		platform1.scaleY = 0.35242533493618;
+		const platform1 = this.add.rectangle(43, 515, 890, 40);
 		platform1.setOrigin(0, 0);
 		platform1.isFilled = true;
 		platform1.fillColor = 0;
@@ -84,9 +62,7 @@ export default class Level1 extends Phaser.Scene {
 		platform1.lineWidth = 5;
 
 		// platform2
-		const platform2 = this.add.rectangle(348, 355, 128, 128);
-		platform2.scaleX = 7;
-		platform2.scaleY = 0.35242533493618;
+		const platform2 = this.add.rectangle(348, 355, 890, 40);
 		platform2.setOrigin(0, 0);
 		platform2.isFilled = true;
 		platform2.fillColor = 0;
@@ -95,15 +71,22 @@ export default class Level1 extends Phaser.Scene {
 		platform2.lineWidth = 5;
 
 		// platform3
-		const platform3 = this.add.rectangle(43, 195, 128, 128);
-		platform3.scaleX = 7;
-		platform3.scaleY = 0.35242533493618;
+		const platform3 = this.add.rectangle(43, 195, 890, 40);
 		platform3.setOrigin(0, 0);
 		platform3.isFilled = true;
 		platform3.fillColor = 0;
 		platform3.isStroked = true;
 		platform3.strokeColor = 2293248;
 		platform3.lineWidth = 5;
+
+		// floor
+		const floor = this.add.rectangle(0, 680, 1280, 40);
+		floor.setOrigin(0, 0);
+		floor.isFilled = true;
+		floor.fillColor = 0;
+		floor.isStroked = true;
+		floor.strokeColor = 2293248;
+		floor.lineWidth = 4;
 
 		this.events.emit("scene-awake");
 	}
@@ -120,6 +103,9 @@ export default class Level1 extends Phaser.Scene {
 	// Win condition tracking
 	private totalEnemyCount: number = 4; // 2 patrol + 2 turret enemies
 	private defeatedEnemyCount: number = 0;
+
+	private turretFiredProjectileCallback: (projectile: EnemyProjectile) => void;
+	private playerDiedCallback: () => void;
 
 	create() {
 		this.editorCreate();
@@ -145,7 +131,7 @@ export default class Level1 extends Phaser.Scene {
 		// Only the floor, ceiling, and walls should be solid from all directions
 		const floor = platforms.find(p => p.y > 650); // Floor is at y=675
 		const ceiling = platforms.find(p => p.y === 0); // Ceiling at top
-		const walls = platforms.filter(p => p.scaleX < 1); // Walls are narrow
+		const walls = platforms.filter(p => p.width === 40); // Walls are narrow
 
 		// Solid collisions for floor, ceiling, and walls
 		if (floor) this.physics.add.collider(this.player, floor);
@@ -304,7 +290,7 @@ export default class Level1 extends Phaser.Scene {
 			// Setup collisions ONLY with walls (left and right walls)
 			// Ignore floor, ceiling, and platforms - wave travels freely
 			const platforms = this.getPlatforms();
-			const walls = platforms.filter(p => p.scaleX < 1); // Walls are narrow
+			const walls = platforms.filter(p => p.width === 40); // Walls are narrow
 
 			// Only collide with walls - wave is destroyed on contact
 			walls.forEach(wall => {
@@ -345,7 +331,7 @@ export default class Level1 extends Phaser.Scene {
 			const platforms = this.getPlatforms();
 			const floor = platforms.find(p => p.y > 650); // Floor is at y=675
 			const ceiling = platforms.find(p => p.y === 0); // Ceiling at top
-			const walls = platforms.filter(p => p.scaleX < 1); // Walls are narrow
+			const walls = platforms.filter(p => p.width === 40); // Walls are narrow
 			const oneWayPlatforms = platforms.filter(p => p !== floor && p !== ceiling && !walls.includes(p));
 
 			// Walls count toward bounce limit
@@ -413,17 +399,20 @@ export default class Level1 extends Phaser.Scene {
 				if (enemy.getState() === EnemyState.STUNNED) {
 					const distance = Phaser.Math.Distance.Between(playerX, playerY, enemy.x, enemy.y);
 
-					if (distance < 200) { // Suction radius
+					// Keep stunned during suction
+					enemy.stun();
+
+					if (distance < Player.INHALE_SUCTION_RADIUS) { // Suction radius
 						// Apply velocity toward player (only X axis - let gravity handle Y)
 						const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, playerX, playerY);
-						const velocityX = Math.cos(angle) * 15; // Suction power
+						const velocityX = Math.cos(angle) * Player.INHALE_SUCTION_POWER; // Suction power
 
 						const body = enemy.body as Phaser.Physics.Arcade.Body;
 						body.setVelocityX(velocityX);
 						// Don't override velocityY - let gravity and platform collision handle vertical movement
 
-						// Check if close enough to swallow (30 pixels)
-						if (distance < 30) {
+						// Check if close enough to swallow (80 pixels)
+						if (distance < Player.SWALLOW_DISTANCE_THRESHOLD) {
 							this.player.swallowEnemy(enemy);
 
 							// Remove from scene
@@ -442,17 +431,16 @@ export default class Level1 extends Phaser.Scene {
 				if (turret.getState() === EnemyState.STUNNED) {
 					const distance = Phaser.Math.Distance.Between(playerX, playerY, turret.x, turret.y);
 
-					if (distance < 200) { // Suction radius
+					if (distance < Player.INHALE_SUCTION_RADIUS) { // Suction radius
 						// Apply velocity toward player (only X axis - turrets have no gravity anyway)
 						const angle = Phaser.Math.Angle.Between(turret.x, turret.y, playerX, playerY);
-						const velocityX = Math.cos(angle) * 15; // Suction power
-						const velocityY = Math.sin(angle) * 15; // Still need Y for turrets since they're immovable
-
+						const velocityX = Math.cos(angle) * Player.INHALE_SUCTION_POWER; // Suction power
+						const velocityY = Math.sin(angle) * Player.INHALE_SUCTION_POWER; // Still need Y for turrets since they're immovable
 						const body = turret.body as Phaser.Physics.Arcade.Body;
 						body.setVelocity(velocityX, velocityY);
 
-						// Check if close enough to swallow (30 pixels)
-						if (distance < 30) {
+						// Check if close enough to swallow (80 pixels)
+						if (distance < Player.SWALLOW_DISTANCE_THRESHOLD) {
 							this.player.swallowEnemy(turret);
 
 							// Remove from scene
