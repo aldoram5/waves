@@ -213,47 +213,52 @@ export default class Level1 extends Phaser.Scene {
 		this.events.on('turret-fired-projectile', (projectile: EnemyProjectile) => {
 			this.projectiles.push(projectile);
 
+			// Store colliders/overlaps for cleanup
+			const colliders: Phaser.Physics.Arcade.Collider[] = [];
+
 			// Projectile-platform collisions (destroy projectile on hit)
 			if (floor) {
-				this.physics.add.collider(projectile, floor, () => {
+				colliders.push(this.physics.add.collider(projectile, floor, () => {
 					projectile.destroyProjectile();
-				});
+				}));
 			}
 			if (ceiling) {
-				this.physics.add.collider(projectile, ceiling, () => {
+				colliders.push(this.physics.add.collider(projectile, ceiling, () => {
 					projectile.destroyProjectile();
-				});
+				}));
 			}
 			walls.forEach(wall => {
-				this.physics.add.collider(projectile, wall, () => {
+				colliders.push(this.physics.add.collider(projectile, wall, () => {
 					projectile.destroyProjectile();
-				});
+				}));
 			});
 			oneWayPlatforms.forEach(platform => {
-				this.physics.add.collider(projectile, platform, () => {
+				colliders.push(this.physics.add.collider(projectile, platform, () => {
 					projectile.destroyProjectile();
-				});
+				}));
 			});
 
 			// Projectile-player overlap (kill player unless hiding)
-			this.physics.add.overlap(
-				this.player,
-				projectile,
-				() => {
-					projectile.destroyProjectile();
-				},
-				this.checkProjectilePlayerCollision,
-				this
+			colliders.push(
+				this.physics.add.overlap(
+					this.player,
+					projectile,
+					() => {
+						projectile.destroyProjectile();
+					},
+					this.checkProjectilePlayerCollision,
+					this
+				)
 			);
 
-			// Cleanup projectile from array when destroyed
+			// Cleanup projectile from array and colliders when destroyed
 			projectile.on('projectile-destroyed', () => {
+				colliders.forEach(c => c.destroy());
 				const index = this.projectiles.indexOf(projectile);
 				if (index > -1) {
 					this.projectiles.splice(index, 1);
 				}
 			});
-		});
 
 		// Listen for player death event to trigger respawn
 		this.events.on('player-died', () => {
