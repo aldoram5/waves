@@ -212,7 +212,6 @@ export default class Level1 extends Phaser.Scene {
 		// Listen for projectile firing events from turrets
 		this.events.on('turret-fired-projectile', (projectile: EnemyProjectile) => {
 			this.projectiles.push(projectile);
-
 			// Store colliders/overlaps for cleanup
 			const colliders: Phaser.Physics.Arcade.Collider[] = [];
 
@@ -251,7 +250,7 @@ export default class Level1 extends Phaser.Scene {
 				)
 			);
 
-			// Cleanup projectile from array and colliders when destroyed
+			// Cleanup projectile from array when destroyed
 			projectile.on('projectile-destroyed', () => {
 				colliders.forEach(c => c.destroy());
 				const index = this.projectiles.indexOf(projectile);
@@ -259,6 +258,7 @@ export default class Level1 extends Phaser.Scene {
 					this.projectiles.splice(index, 1);
 				}
 			});
+		});
 
 		// Listen for player death event to trigger respawn
 		this.events.on('player-died', () => {
