@@ -113,6 +113,24 @@
             "isStroked": true,
             "width": 128,
             "height": 128
+        },
+        {
+            "type": "Rectangle",
+            "id": "c3c3e94c-348a-41fc-81b0-d1f55c0ef21f",
+            "label": "platform",
+            "x": 43,
+            "y": 195,
+            "scaleX": 7,
+            "scaleY": 0.35242533493618,
+            "originX": 0,
+            "originY": 0,
+            "isFilled": true,
+            "fillColor": "#000",
+            "strokeColor": "#22fe00",
+            "lineWidth": 5,
+            "isStroked": true,
+            "width": 128,
+            "height": 128
         }
     ],
     "plainObjects": [],
