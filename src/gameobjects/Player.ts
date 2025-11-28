@@ -49,9 +49,17 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     // Death state tracking
     private deathScaleProgress: number;
 
+    // Spawn position tracking
+    private spawnX: number;
+    private spawnY: number;
+
     constructor(scene: Phaser.Scene, x: number, y: number) {
         // Create sprite with 'whale1' as default texture
         super(scene, x, y, 'whale1');
+
+        // Store spawn position for respawning
+        this.spawnX = x;
+        this.spawnY = y;
 
         // Add to scene and enable physics
         scene.add.existing(this);
@@ -221,6 +229,12 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             return PlayerState.MOVING;
         }
 
+        // SPECIAL CASE: If we just respawned from DYING, we stay in HIDING state
+        // until the player moves or does something else
+        if (this.previousState === PlayerState.DYING && this.currentState === PlayerState.HIDING) {
+            return PlayerState.HIDING;
+        }
+
         // IDLE state - default when no other conditions met
         return PlayerState.IDLE;
     }
@@ -268,6 +282,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
                 // Apply upward velocity
                 const body = this.body as Phaser.Physics.Arcade.Body;
                 body.setVelocityY(PLAYER_PHYSICS.JUMP_VELOCITY);
+                // Hide wave sprite during jump
+                this.waveSprite.setVisible(false);
                 break;
 
             case PlayerState.FALLING:
@@ -278,6 +294,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
                 if (this.jumpPhase === null) {
                     this.jumpPhase = 'air';
                 }
+                // Hide wave sprite during jump
+                this.waveSprite.setVisible(false);
                 break;
 
             case PlayerState.ATTACKING:
@@ -325,6 +343,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
                 this.jumpPhase = null;
                 // Reset vertical flip
                 this.setFlipY(false);
+                // Show wave sprite again
+                this.waveSprite.setVisible(true);
                 break;
 
             case PlayerState.ATTACKING:
@@ -355,8 +375,6 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
      * @param state The current active state
      */
     private updateState(state: PlayerState): void {
-        const body = this.body as Phaser.Physics.Arcade.Body;
-
         // Horizontal movement allowed in most states (except DYING, HIDING, ATTACKING)
         if (state !== PlayerState.DYING && state !== PlayerState.HIDING && state !== PlayerState.ATTACKING) {
             this.handleHorizontalMovement();
@@ -493,7 +511,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         if (this.deathScaleProgress >= 1.0) {
             // Death animation complete
             this.setVisible(false);
-            // TODO: Trigger respawn or game over
+            // Emit event for scene to handle respawn
+            this.scene.events.emit('player-died');
         }
     }
 
@@ -673,6 +692,56 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             this.currentState = PlayerState.DYING;
             this.enterState(PlayerState.DYING);
         }
+    }
+
+    /**
+     * Check if the player is currently in HIDING state.
+     * Used for collision detection - player is immune to damage while hiding.
+     *
+     * @returns True if player is in HIDING state, false otherwise
+     */
+    public isHiding(): boolean {
+        return this.currentState === PlayerState.HIDING;
+    }
+
+    /**
+     * Respawn the player at the original spawn position.
+     * Resets all state, physics, and visual properties.
+     * Player starts in HIDING state after respawn.
+     */
+    public respawn(): void {
+        // Reset position to spawn point
+        this.setPosition(this.spawnX, this.spawnY);
+
+        // Reset physics
+        const body = this.body as Phaser.Physics.Arcade.Body;
+        body.setVelocity(0, 0);
+
+        // Reset visual state
+        this.setVisible(true);
+        this.setScale(1, 1);
+        this.angle = 0;
+        
+        // Reset vertical flip
+        this.setFlipY(false);
+
+        // Reset wave sprite
+        this.waveSprite.setVisible(true);
+        this.waveStartX = this.spawnX;
+        this.waveY = this.spawnY + PLAYER_PHYSICS.WAVE_OFFSET_Y;
+
+        // Force HIDING state
+        this.currentState = PlayerState.HIDING;
+        this.previousState = PlayerState.DYING;
+        this.enterState(PlayerState.HIDING);
+
+        // Reset death progress
+        this.deathScaleProgress = 0;
+
+        // Reset frame counters
+        this.frameCounter = 0;
+        this.jumpPhase = null;
+        this.landingFrameCount = 0;
     }
 
     /**

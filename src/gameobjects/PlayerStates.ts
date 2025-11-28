@@ -54,8 +54,8 @@ export const FRAME_DURATIONS = {
  */
 export const PLAYER_PHYSICS = {
     MOVE_SPEED: 200,         // Horizontal velocity when moving (pixels/second)
-    JUMP_VELOCITY: -460,     // Upward velocity on jump (negative is up, pixels/second)
+    JUMP_VELOCITY: -530,     // Upward velocity on jump (negative is up, pixels/second)
     MAX_FALL_SPEED: 800,     // Terminal velocity when falling (pixels/second)
-    JUMP_HEIGHT: 130,        // Approximate jump height in pixels for reference only; not used in calculations or as a configurable parameter
+    JUMP_HEIGHT: 200,        // Approximate jump height in pixels for reference only; not used in calculations or as a configurable parameter
     WAVE_OFFSET_Y: 5        // Vertical offset of wave sprite from whale position
 };
