@@ -161,6 +161,21 @@ export default class Level1 extends Phaser.Scene {
 			oneWayPlatforms.forEach(platform => {
 				this.physics.add.collider(enemy, platform);
 			});
+
+			// Enemy-player collision detection
+			// Using overlap instead of collider to avoid physical collision
+			this.physics.add.overlap(
+				this.player,
+				enemy,
+				undefined, // No collision callback needed
+				this.checkEnemyPlayerCollision, // Process callback
+				this
+			);
+		});
+
+		// Listen for player death event to trigger respawn
+		this.events.on('player-died', () => {
+			this.player.respawn();
 		});
 	}
 
@@ -176,6 +191,27 @@ export default class Level1 extends Phaser.Scene {
 			obj instanceof Phaser.GameObjects.Rectangle
 		) as Phaser.GameObjects.Rectangle[];
 		return platforms;
+	}
+
+	/**
+	 * Process callback for enemy-player collision.
+	 * Only triggers player death if player is NOT hiding.
+	 * When hiding (down arrow held), player is immune to enemy damage.
+	 *
+	 * @param player The player body or game object
+	 * @param enemy The enemy body or game object
+	 * @returns False to avoid physical collision
+	 */
+	private checkEnemyPlayerCollision(
+		player: Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
+		enemy: Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
+	): boolean {
+		// Only kill player if NOT hiding
+		if (!this.player.isHiding()) {
+			this.player.die();
+		}
+		// Return false to avoid physical collision (no pushing/bouncing)
+		return false;
 	}
 
 	/**
