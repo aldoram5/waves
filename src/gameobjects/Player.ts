@@ -1,5 +1,9 @@
 import Phaser from 'phaser';
 import { PlayerState, STATE_PRIORITY, FRAME_DURATIONS, PLAYER_PHYSICS } from './PlayerStates';
+import WaveAttackProjectile from './WaveAttackProjectile';
+import SpoutProjectile from './SpoutProjectile';
+import SwallowManager from './SwallowManager';
+import BaseEnemy from './BaseEnemy';
 
 /**
  * Player entity for W.A.V.E.S game.
@@ -53,6 +57,28 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     private spawnX: number;
     private spawnY: number;
 
+    // Swallow/Inhale system
+    private swallowManager: SwallowManager;
+    private inhaleSuctionRadius: number = 200; // Detection range in pixels
+    private inhaleSuctionPower: number = 15; // Pull strength per frame
+
+    // Spit timer system
+    private spitTimer: number = 0;
+    private spitTimerActive: boolean = false;
+    private spitWarningFlash: Phaser.Tweens.Tween | null = null;
+    private static readonly SPIT_TIMER_DURATION = 1200; // 20 seconds at 60fps
+    private static readonly SPIT_WARNING_TIME = 300; // 5 seconds remaining
+
+    // Display size constants
+    private static readonly NORMAL_DISPLAY_SIZE = 128; // Normal whale sprite size (width and height)
+    private static readonly ENLARGED_DISPLAY_SIZE = 192; // Enlarged size when enemies swallowed (1.5x scale)
+
+    // Physics body constants (collision box)
+    private static readonly BODY_WIDTH = 50; // Collision box width
+    private static readonly BODY_HEIGHT = 40; // Collision box height
+    private static readonly BODY_OFFSET_X = 40; // X offset to center collision box
+    private static readonly BODY_OFFSET_Y = 70; // Y offset to position collision box
+
     constructor(scene: Phaser.Scene, x: number, y: number) {
         // Create sprite with 'whale1' as default texture
         super(scene, x, y, 'whale1');
@@ -92,6 +118,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.jumpPhase = null;
         this.isOnPlatform = false;
         this.deathScaleProgress = 0;
+
+        // Initialize swallow manager
+        this.swallowManager = new SwallowManager();
     }
 
     /**
@@ -103,11 +132,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
         // Set collision box size (smaller than sprite for better feel)
         // Whale sprites are 128x128 with transparent padding
-        body.setSize(50, 40);
+        body.setSize(Player.BODY_WIDTH, Player.BODY_HEIGHT);
 
         // Offset collision box to account for transparent padding in sprite
         // X offset centers horizontally, Y offset pushes down to whale's body
-        body.setOffset(40, 70);
+        body.setOffset(Player.BODY_OFFSET_X, Player.BODY_OFFSET_Y);
 
         // Prevent player from leaving screen
         body.setCollideWorldBounds(true);
@@ -142,6 +171,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         // Update current state logic
         this.updateState(this.currentState);
 
+        // Update spit timer if active
+        this.updateSpitTimer();
+
         // Update visual representations
         this.updateAnimations();
         this.updateWavePosition();
@@ -168,8 +200,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
         // ATTACKING state - Z key just pressed
         // Player can only attack when not jumping or falling
-        if (this.zKey && Phaser.Input.Keyboard.JustDown(this.zKey) && this.currentState !== PlayerState.JUMPING && this.currentState !== PlayerState.FALLING) {
-            return PlayerState.ATTACKING;
+        if (this.zKey && Phaser.Input.Keyboard.JustDown(this.zKey)) {
+            if (this.currentState !== PlayerState.JUMPING && this.currentState !== PlayerState.FALLING) {
+                return PlayerState.ATTACKING;
+            }
         }
 
         // ATTACKING state continuation - stay in state until animation completes
@@ -271,6 +305,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
                 // Switch to tail textures
                 this.setTexture('whale-tail1');
                 this.currentWhaleFrame = 0;
+                // Reposition wave to match whale's position when becoming idle
+                this.waveStartX = this.x;
+                this.waveY = this.y + PLAYER_PHYSICS.WAVE_OFFSET_Y;
                 break;
 
             case PlayerState.JUMPING:
@@ -301,7 +338,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             case PlayerState.ATTACKING:
                 // Show attack texture
                 this.setTexture('whale-inhale2');
-                // TODO: Spawn wave attack projectile
+                // Spawn wave attack projectile
+                this.spawnWaveAttack();
                 break;
 
             case PlayerState.INHALING:
@@ -421,7 +459,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             case PlayerState.INHALING:
                 // Allow movement while inhaling
                 // Animation alternates in updateAnimations()
-                // TODO: Check for nearby stunned enemies to inhale
+                // Emit inhaling event for scene to handle suction logic
+                this.scene.events.emit('player-inhaling', this.x, this.y);
                 break;
 
             case PlayerState.DYING:
@@ -631,13 +670,14 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
      * Update wave sprite position based on whale position and current state.
      * Wave stays at a fixed Y position (platform level) and only moves on X axis.
      *
-     * IDLE/MOVING: Wave locks to whale position (both X and Y repositioned)
+     * IDLE/MOVING/HIDING: Wave locks to whale position (both X and Y repositioned)
      * JUMPING/FALLING: Wave X locked at jump start, Y stays at platform level
      * Other states: Wave follows whale X, Y stays at platform level
      */
     private updateWavePosition(): void {
         switch (this.currentState) {
             case PlayerState.IDLE:
+            case PlayerState.HIDING:
             case PlayerState.MOVING:
                 // Wave locks to whale position - update both X and Y
                 this.waveSprite.setPosition(
@@ -683,12 +723,141 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     /**
+     * Spawn a wave attack projectile or spout attack based on swallow count.
+     * If enemies are swallowed (count > 0), fires spout attack instead of wave.
+     * Emits 'player-fired-wave' or 'player-fired-spout' event for scene to handle collisions.
+     */
+    private spawnWaveAttack(): void {
+
+        // Determine direction based on flipX (1 = right, -1 = left)
+        // According to movement code: flipX = false is left, flipX = true is right
+        const direction = this.flipX ? 1 : -1;
+
+        // Check if player has swallowed enemies
+        const swallowedCount = this.swallowManager.getCount();
+
+        if (swallowedCount > 0) {
+            // Fire spout attack instead of wave
+            // Spawn spout projectile at player position
+            const spoutProjectile = new SpoutProjectile(
+                this.scene,
+                this.x,
+                this.y,
+                direction,
+                swallowedCount
+            );
+
+            // Reset player to normal display size immediately
+            this.setDisplaySize(Player.NORMAL_DISPLAY_SIZE, Player.NORMAL_DISPLAY_SIZE);
+
+            // Reset body size to ensure collision box stays correct
+            const body = this.body as Phaser.Physics.Arcade.Body;
+            body.setSize(Player.BODY_WIDTH, Player.BODY_HEIGHT);
+            body.setOffset(Player.BODY_OFFSET_X, Player.BODY_OFFSET_Y);
+
+            // Stop spit timer and clear warning flash
+            this.spitTimerActive = false;
+            this.spitTimer = 0;
+            if (this.spitWarningFlash) {
+                this.spitWarningFlash.destroy();
+                this.spitWarningFlash = null;
+            }
+            this.clearTint();
+
+            // Clear swallow manager (enemies are now in the spout)
+            this.swallowManager.clear();
+
+            // Emit scene event for collision setup
+            this.scene.events.emit('player-fired-spout', spoutProjectile);
+        } else {
+            // Fire normal wave attack
+            // Spawn wave projectile at player position
+            const waveProjectile = new WaveAttackProjectile(
+                this.scene,
+                this.x,
+                this.y,
+                direction
+            );
+
+            // Emit scene event for collision setup
+            this.scene.events.emit('player-fired-wave', waveProjectile);
+        }
+    }
+
+    /**
+     * Swallow an enemy that has been pulled in by inhale.
+     * Stores enemy data in SwallowManager and scales player up.
+     * Emits event for scene to handle enemy removal.
+     *
+     * @param enemy The enemy to swallow
+     */
+    public swallowEnemy(enemy: BaseEnemy): void {
+        // Add enemy to swallow manager
+        this.swallowManager.addEnemy(enemy);
+
+        // Scale sprite to show player has enemies inside
+        // Whale sprites are 128x128, scale to 192x192 (1.5x)
+        this.setDisplaySize(Player.ENLARGED_DISPLAY_SIZE, Player.ENLARGED_DISPLAY_SIZE);
+
+        // Update physics body to match new size
+        const body = this.body as Phaser.Physics.Arcade.Body;
+        body.setSize(Player.BODY_WIDTH, Player.BODY_HEIGHT);
+        body.setOffset(Player.BODY_OFFSET_X, Player.BODY_OFFSET_Y);
+
+        // Start spit timer if this is the first enemy
+        if (this.swallowManager.getCount() === 1) {
+            this.spitTimer = Player.SPIT_TIMER_DURATION;
+            this.spitTimerActive = true;
+        }
+        // Force position update to prevent sinking, we use half body height to adjust for offset
+        this.setPosition(this.x, this.y - Player.BODY_HEIGHT/2); 
+
+        // Emit event with count for scene tracking
+        this.scene.events.emit('enemy-swallowed', this.swallowManager.getCount());
+    }
+
+    /**
+     * Update the spit timer countdown and handle warning flash.
+     * Called every frame when timer is active.
+     */
+    private updateSpitTimer(): void {
+        if (!this.spitTimerActive) return;
+
+        // Decrement timer
+        this.spitTimer--;
+
+        // Start red flash warning at 5 seconds remaining
+        if (this.spitTimer <= Player.SPIT_WARNING_TIME && !this.spitWarningFlash) {
+            // Create flashing red tint (4Hz = every 15 frames)
+            this.spitWarningFlash = this.scene.tweens.add({
+                targets: this,
+                tint: { from: 0xffffff, to: 0xff0000 },
+                duration: 125, // 250ms total cycle (125ms each way)
+                yoyo: true,
+                repeat: -1 // Infinite loop
+            });
+        }
+
+        // Kill player if timer expires
+        if (this.spitTimer <= 0) {
+            this.die();
+        }
+    }
+
+    /**
      * Trigger player death sequence.
      * Transitions to DYING state which cannot be interrupted.
      * This method is called when the player takes damage.
      */
     public die(): void {
         if (this.currentState !== PlayerState.DYING) {
+            // Cancel spit timer flash if active
+            if (this.spitWarningFlash) {
+                this.spitWarningFlash.destroy();
+                this.spitWarningFlash = null;
+            }
+            this.clearTint();
+
             this.currentState = PlayerState.DYING;
             this.enterState(PlayerState.DYING);
         }
@@ -702,6 +871,16 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
      */
     public isHiding(): boolean {
         return this.currentState === PlayerState.HIDING;
+    }
+
+    /**
+     * Get the swallow manager for accessing swallowed enemy data.
+     * Used by Level1 scene for enemy respawn logic.
+     *
+     * @returns The swallow manager instance
+     */
+    public getSwallowManager(): SwallowManager {
+        return this.swallowManager;
     }
 
     /**
@@ -720,7 +899,12 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         // Reset visual state
         this.setVisible(true);
         this.setScale(1, 1);
+        this.setDisplaySize(Player.NORMAL_DISPLAY_SIZE, Player.NORMAL_DISPLAY_SIZE); // Reset display size to original
         this.angle = 0;
+
+        // Reset body size to ensure collision box is correct
+        body.setSize(Player.BODY_WIDTH, Player.BODY_HEIGHT);
+        body.setOffset(Player.BODY_OFFSET_X, Player.BODY_OFFSET_Y);
         
         // Reset vertical flip
         this.setFlipY(false);
@@ -742,6 +926,18 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.frameCounter = 0;
         this.jumpPhase = null;
         this.landingFrameCount = 0;
+
+        // Reset spit timer and flash
+        this.spitTimer = 0;
+        this.spitTimerActive = false;
+        if (this.spitWarningFlash) {
+            this.spitWarningFlash.destroy();
+            this.spitWarningFlash = null;
+        }
+        this.clearTint();
+
+        // Clear swallow manager (enemies will be respawned by Level1)
+        this.swallowManager.clear();
     }
 
     /**

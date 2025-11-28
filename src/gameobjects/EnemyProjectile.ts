@@ -103,7 +103,10 @@ export default class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
      */
     destroy(fromScene?: boolean): void {
         // Remove world bounds listener
-        this.scene.physics.world.off('worldbounds', this.worldBoundsCallback, this);
+        // Check if scene and physics still exist (may be undefined if scene already stopped)
+        if (this.scene && this.scene.physics && this.scene.physics.world) {
+            this.scene.physics.world.off('worldbounds', this.worldBoundsCallback, this);
+        }
 
         super.destroy(fromScene);
     }

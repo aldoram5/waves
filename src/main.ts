@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import Level1 from "./scenes/Level1";
 import Preload from "./scenes/Preload";
 import MainMenu from "./scenes/MainMenu";
+import WinPopup from "./scenes/WinPopup";
 
 class Boot extends Phaser.Scene {
 
@@ -37,7 +38,7 @@ window.addEventListener('load', function () {
 				debug: process.env.NODE_ENV === 'development' // Enable debug rendering during development
 			}
 		},
-		scene: [Boot, Preload, MainMenu, Level1]
+		scene: [Boot, Preload, MainMenu, Level1, WinPopup]
 	});
 
 	game.scene.start("Boot");

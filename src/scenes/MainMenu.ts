@@ -89,9 +89,19 @@ export default class MainMenu extends Phaser.Scene {
 		instruction_text_4.setStyle({ "fontSize": "22px", "shadow.color": "#fbf7f7ff", "shadow.blur": 2 });
 
 		// instruction_text_5
-		const instruction_text_5 = this.add.text(884, 670, "", {});
-		instruction_text_5.text = "SPIT THEM OUT WITH X AS WELL!";
+		const instruction_text_5 = this.add.text(930, 668, "", {});
+		instruction_text_5.text = "SPIT THEM OUT WITH Z!";
 		instruction_text_5.setStyle({ "fontSize": "22px", "shadow.color": "#fbf7f7ff", "shadow.blur": 2 });
+
+		// instruction_text_6
+		const instruction_text_6 = this.add.text(273, 660, "", {});
+		instruction_text_6.text = "HIDING MAKES YOU INVULNERABLE!";
+		instruction_text_6.setStyle({ "fontSize": "22px", "shadow.color": "#fbf7f7ff", "shadow.blur": 2 });
+
+		// instruction_text_7
+		const instruction_text_7 = this.add.text(637, 285, "", {});
+		instruction_text_7.text = "Hi! I'm Wavy!\n";
+		instruction_text_7.setStyle({ "fontSize": "22px", "shadow.color": "#fbf7f7ff", "shadow.blur": 2 });
 
 		this.events.emit("scene-awake");
 	}

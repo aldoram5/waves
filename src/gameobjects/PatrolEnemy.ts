@@ -17,10 +17,24 @@ import BaseEnemy from './BaseEnemy';
 export default class PatrolEnemy extends BaseEnemy {
 
     // Movement constants
-    private static readonly MOVE_SPEED = 50;
+    private static readonly MOVE_SPEED = 50; // Pixels per second
     private static readonly EDGE_CHECK_DISTANCE = 20; // Distance ahead to check for platform edge
     private static readonly ROTATION_SPEED = 90; // Degrees per second of rotation while moving
-    private static readonly TURN_DURATION = 200; // Duration for 90-degree turn when changing direction
+    private static readonly TURN_DURATION = 200; // Duration for 90-degree turn (milliseconds)
+
+    // Collision box constants
+    private static readonly BODY_SIZE = 110; // Collision box size (square)
+    private static readonly BODY_OFFSET = 9; // Offset to center collision box
+
+    // Visual constants
+    private static readonly DEPTH = 5; // Render depth (enemy layer)
+
+    // Edge detection constants
+    private static readonly EDGE_Y_OFFSET = 5; // Check slightly below enemy's feet
+    private static readonly EDGE_RAY_LENGTH = 10; // Short ray to detect immediate platform below
+
+    // Turn animation constants
+    private static readonly TURN_ANGLE = 90; // Degrees to rotate during turn
 
     // Movement state
     private direction: -1 | 1; // -1 = left, 1 = right
@@ -53,8 +67,8 @@ export default class PatrolEnemy extends BaseEnemy {
 
         // Enemy sprite is 128x128, set a reasonable collision box
         // Using a smaller size for better gameplay feel
-        body.setSize(110, 110);
-        body.setOffset(9, 9); // Center the collision box
+        body.setSize(PatrolEnemy.BODY_SIZE, PatrolEnemy.BODY_SIZE);
+        body.setOffset(PatrolEnemy.BODY_OFFSET, PatrolEnemy.BODY_OFFSET); // Center the collision box
 
         // Prevent enemy from leaving screen
         body.setCollideWorldBounds(true);
@@ -69,7 +83,7 @@ export default class PatrolEnemy extends BaseEnemy {
         body.setVelocityX(this.direction * PatrolEnemy.MOVE_SPEED);
 
         // Set depth layer
-        this.setDepth(5); // Enemy layer
+        this.setDepth(PatrolEnemy.DEPTH); // Enemy layer
     }
 
     /**
@@ -111,16 +125,18 @@ export default class PatrolEnemy extends BaseEnemy {
     /**
      * Update logic specific to STUNNED state.
      * Stops all movement and rotation.
-     * Reserved for future wave attack mechanic implementation.
+     * Calls base class to decrement stun timer.
      */
     protected updateStunnedState(): void {
+        // Call base class to decrement stun timer
+        super.updateStunnedState();
+
         const body = this.body as Phaser.Physics.Arcade.Body;
 
         // Stop movement while stunned
         body.setVelocityX(0);
 
-        // TODO: Add stun duration timer and transition back to NORMAL after timeout
-        // TODO: Show stunned sprite (enemy-stun.png)
+        // No rotation while stunned (angle stays frozen)
     }
 
     /**
@@ -158,7 +174,7 @@ export default class PatrolEnemy extends BaseEnemy {
         const body = this.body as Phaser.Physics.Arcade.Body;
         body.setVelocityX(0);
 
-        // TODO: Start stun timer
+        // Stun timer is set by base class stun() method
     }
 
     /**
@@ -190,10 +206,10 @@ export default class PatrolEnemy extends BaseEnemy {
             : body.left - PatrolEnemy.EDGE_CHECK_DISTANCE;
 
         // Check from slightly below the enemy's feet
-        const checkY = body.bottom + 5;
+        const checkY = body.bottom + PatrolEnemy.EDGE_Y_OFFSET;
 
         // Cast a ray downward to check for platform
-        const rayLength = 10; // Short ray to detect immediate platform below
+        const rayLength = PatrolEnemy.EDGE_RAY_LENGTH; // Short ray to detect immediate platform below
 
         // Check if any platform exists at the check position
         for (const platform of this.platforms) {
@@ -235,9 +251,9 @@ export default class PatrolEnemy extends BaseEnemy {
         // Reverse direction
         this.direction = this.direction === 1 ? -1 : 1;
 
-        // Calculate target angle for turn (add 90 degrees)
+        // Calculate target angle for turn (add or subtract 90 degrees)
         // The direction of rotation matches the new movement direction
-        const rotationChange = this.direction === 1 ? 90 : -90;
+        const rotationChange = this.direction === 1 ? PatrolEnemy.TURN_ANGLE : -PatrolEnemy.TURN_ANGLE;
         const targetAngle = this.angle + rotationChange;
 
         // Quick turn animation
@@ -255,9 +271,38 @@ export default class PatrolEnemy extends BaseEnemy {
     }
 
     /**
+     * Setup when entering DYING state.
+     * Stops all rotation tweens before calling base implementation.
+     */
+    protected enterDyingState(): void {
+        // Stop all rotation animations
+        if (this.scene && this.scene.tweens) {
+            this.scene.tweens.killTweensOf(this);
+        }
+
+        // Reset turning flag
+        this.isTurning = false;
+
+        // Call base implementation for common death setup
+        super.enterDyingState();
+    }
+
+    /**
+     * Cleanup when exiting DYING state.
+     * Called right before enemy is destroyed.
+     */
+    protected exitDyingState(): void {
+        // No specific cleanup needed for patrol enemy
+    }
+
+    /**
      * Clean up resources when enemy is destroyed.
      */
     destroy(fromScene?: boolean): void {
+        // Clean up any remaining tweens
+        if (this.scene && this.scene.tweens) {
+            this.scene.tweens.killTweensOf(this);
+        }
         super.destroy(fromScene);
     }
 }

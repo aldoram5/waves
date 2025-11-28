@@ -25,6 +25,15 @@ export default abstract class BaseEnemy extends Phaser.Physics.Arcade.Sprite {
     protected currentState: EnemyState;
     protected previousState: EnemyState;
 
+    // Stun timer management
+    protected stunTimer: number = 0;
+    protected stunDuration: number = 300; // 5 seconds at 60fps
+
+    // Death animation system
+    protected deathTimer: number = 0;
+    protected deathDuration: number = 30; // 0.5 seconds at 60fps (30 frames)
+    protected startScale: number = 1.0;
+
     /**
      * Constructor for base enemy.
      * Child classes should call this via super() with their specific texture.
@@ -90,8 +99,8 @@ export default abstract class BaseEnemy extends Phaser.Physics.Arcade.Sprite {
         }
 
         // STUNNED state - medium priority
-        // Child classes should manage stun duration and transition back to NORMAL
-        if (this.currentState === EnemyState.STUNNED) {
+        // Check if stun timer is active
+        if (this.stunTimer > 0) {
             return EnemyState.STUNNED;
         }
 
@@ -174,8 +183,28 @@ export default abstract class BaseEnemy extends Phaser.Physics.Arcade.Sprite {
      */
     public stun(): void {
         if (this.currentState !== EnemyState.DYING) {
-            this.currentState = EnemyState.STUNNED;
-            this.enterState(EnemyState.STUNNED);
+            // Reset stun timer to full duration (resets if already stunned)
+            this.stunTimer = this.stunDuration;
+
+            // Only transition to STUNNED if not already in that state
+            if (this.currentState !== EnemyState.STUNNED) {
+                this.currentState = EnemyState.STUNNED;
+                this.enterState(EnemyState.STUNNED);
+            }
+        }
+    }
+
+    /**
+     * Public API: Trigger death sequence on this enemy.
+     * Called when player's spout attack hits enemy.
+     * Transitions enemy to DYING state and starts scale-down animation.
+     * Enemy will be destroyed after animation completes.
+     */
+    public die(): void {
+        // Only allow death if not already dying
+        if (this.currentState !== EnemyState.DYING) {
+            this.currentState = EnemyState.DYING;
+            this.enterState(EnemyState.DYING);
         }
     }
 
@@ -201,18 +230,36 @@ export default abstract class BaseEnemy extends Phaser.Physics.Arcade.Sprite {
 
     /**
      * Update logic specific to STUNNED state.
-     * Typically: stop movement, show stun sprite, count down stun duration.
+     * Decrements stun timer each frame.
+     * Child classes should call super.updateStunnedState() and add their own logic.
      */
-    protected abstract updateStunnedState(): void;
+    protected updateStunnedState(): void {
+        // Decrement stun timer
+        if (this.stunTimer > 0) {
+            this.stunTimer--;
+        }
+    }
 
     /**
      * Update logic specific to DYING state.
-     * Typically: play death animation, handle cleanup.
-     * Reserved for future implementation.
+     * Animates scale-down from 1.0 to 0.0 over 30 frames (0.5 seconds).
+     * Destroys the enemy sprite when animation completes.
      */
     protected updateDyingState(): void {
-        // Default implementation does nothing
-        // Child classes can override if needed
+        // Increment death timer
+        this.deathTimer++;
+
+        // Calculate scale progress (1.0 -> 0.0 over deathDuration frames)
+        const progress = this.deathTimer / this.deathDuration;
+        const currentScale = this.startScale * (1.0 - progress);
+
+        // Apply scale to sprite
+        this.setScale(currentScale, currentScale);
+
+        // Check if animation complete
+        if (this.deathTimer >= this.deathDuration) {
+            this.destroy();
+        }
     }
 
     /**
@@ -241,12 +288,25 @@ export default abstract class BaseEnemy extends Phaser.Physics.Arcade.Sprite {
 
     /**
      * Setup when entering DYING state.
-     * Typically: start death animation, disable collision.
-     * Reserved for future implementation.
+     * Shows stun sprite, disables collision, and initializes death animation.
+     * Child classes can override to add specific cleanup (stop tweens, etc).
      */
     protected enterDyingState(): void {
-        // Default implementation does nothing
-        // Child classes can override if needed
+        // Switch to stun sprite for death animation
+        // (using stun texture as the "defeated" look)
+        const stunTexture = this.texture.key.includes('enemy2') ? 'enemy2-stun' : 'enemy-stun';
+        this.setTexture(stunTexture);
+
+        // Disable collision so enemy doesn't interact with player/projectiles
+        const body = this.body as Phaser.Physics.Arcade.Body;
+        body.enable = false;
+
+        // Stop all physics movement
+        body.setVelocity(0, 0);
+
+        // Initialize death timer
+        this.deathTimer = 0;
+        this.startScale = this.scaleX; // Store current scale
     }
 
     /**

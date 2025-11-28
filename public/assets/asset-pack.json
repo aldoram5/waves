@@ -59,6 +59,11 @@
                 "key": "wavemain1"
             },
             {
+                "url": "assets/whale-ball.png",
+                "type": "image",
+                "key": "whale-ball"
+            },
+            {
                 "url": "assets/whale-inhale1.png",
                 "type": "image",
                 "key": "whale-inhale1"
