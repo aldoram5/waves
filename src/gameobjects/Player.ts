@@ -70,6 +70,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     private static readonly SPIT_TIMER_DURATION = 1200; // 20 seconds at 60fps
     private static readonly SPIT_WARNING_TIME = 300; // 5 seconds remaining
 
+    // Level completion state
+    private isLevelComplete: boolean = false;
+
     // Display size constants
     private static readonly NORMAL_DISPLAY_SIZE = 128; // Normal whale sprite size (width and height)
     private static readonly ENLARGED_DISPLAY_SIZE = 192; // Enlarged size when enemies swallowed (1.5x scale)
@@ -158,6 +161,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
      * Handles state evaluation, state transitions, and rendering updates.
      */
     public update(): void {
+        // Skip all updates if level is complete
+        if (this.isLevelComplete) {
+            return;
+        }
+
         // Evaluate what state we should be in based on current conditions
         const desiredState = this.evaluateState();
 
@@ -907,7 +915,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         // Reset body size to ensure collision box is correct
         body.setSize(Player.BODY_WIDTH, Player.BODY_HEIGHT);
         body.setOffset(Player.BODY_OFFSET_X, Player.BODY_OFFSET_Y);
-        
+
         // Reset vertical flip
         this.setFlipY(false);
 
@@ -940,6 +948,42 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
         // Clear swallow manager (enemies will be respawned by Level1)
         this.swallowManager.clear();
+
+        // Re-enable updates in case level was completed (though this shouldn't happen)
+        this.isLevelComplete = false;
+    }
+
+    /**
+     * Disable player updates and input when level is complete.
+     * Stops all state transitions, movement, attacks, and spit timer.
+     * Clears any swallowed enemies and visual effects.
+     */
+    public disableOnLevelComplete(): void {
+        // Set level complete flag to stop update loop
+        this.isLevelComplete = true;
+
+        // Stop all physics movement
+        const body = this.body as Phaser.Physics.Arcade.Body;
+        body.setVelocity(0, 0);
+
+        // Stop and clear spit timer
+        this.spitTimerActive = false;
+        this.spitTimer = 0;
+
+        // Remove spit warning flash if active
+        if (this.spitWarningFlash) {
+            this.spitWarningFlash.destroy();
+            this.spitWarningFlash = null;
+        }
+        this.clearTint();
+
+        // Clear swallowed enemies and reset display size
+        this.swallowManager.clear();
+        this.setDisplaySize(Player.NORMAL_DISPLAY_SIZE, Player.NORMAL_DISPLAY_SIZE);
+
+        // Reset body size to ensure collision box is correct
+        body.setSize(Player.BODY_WIDTH, Player.BODY_HEIGHT);
+        body.setOffset(Player.BODY_OFFSET_X, Player.BODY_OFFSET_Y);
     }
 
     /**

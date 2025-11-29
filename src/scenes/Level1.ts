@@ -665,9 +665,12 @@ export default class Level1 extends Phaser.Scene {
 
 	/**
 	 * Triggers the win condition when all enemies are defeated.
-	 * Pauses physics and launches the WinPopup scene.
+	 * Disables player updates, pauses physics, and launches the WinPopup scene.
 	 */
 	private triggerWinCondition(): void {
+		// Disable player updates and clear any swallowed enemies
+		this.player.disableOnLevelComplete();
+
 		// Pause physics to freeze the game
 		this.physics.pause();
 
