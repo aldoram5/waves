@@ -125,7 +125,7 @@ export default class Level1 extends Phaser.Scene {
 
 		// Create player at starting position (on the floor platform)
 		// Floor is at y=675, player needs to be above it
-		this.player = new Player(this, 200, 630);
+		this.player = new Player(this, 200, 635);
 
 		// Setup one-way platform collisions (can jump through from below)
 		// Only the floor, ceiling, and walls should be solid from all directions

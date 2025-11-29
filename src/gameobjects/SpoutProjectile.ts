@@ -114,7 +114,11 @@ export default class SpoutProjectile extends Phaser.Physics.Arcade.Sprite {
 
         // Check if bounce limit reached
         if (this.bounceCount >= this.bounceLimit) {
-            this.destroyProjectile();
+            // Destroy with explosion effect when bounce limit reached
+            this.destroyProjectile(true);
+        } else {
+            // Play bounce sound on wall collision (but not on final bounce)
+            this.scene.sound.play('bounce-sound');
         }
     }
 
@@ -122,14 +126,57 @@ export default class SpoutProjectile extends Phaser.Physics.Arcade.Sprite {
      * Destroy the projectile and emit cleanup event.
      * Called when bounce limit reached, floor hit, or enemy collision.
      *
+     * @param withExplosion If true, creates particle explosion effect
+     *
      * Emits 'spout-destroyed' event for scene cleanup.
      */
-    public destroyProjectile(): void {
+    public destroyProjectile(withExplosion: boolean = false): void {
+        // Create particle explosion effect if requested
+        if (withExplosion) {
+            this.createExplosionEffect();
+        }
+
         // Emit event before destruction so listeners can react
         this.emit('spout-destroyed');
 
         // Destroy the sprite
         this.destroy();
+    }
+
+    /**
+     * Create a particle explosion effect when the spout is destroyed.
+     * Spawns particles that spread outward in all directions.
+     */
+    private createExplosionEffect(): void {
+        // Particle effect constants
+        const PARTICLE_COUNT = 15; // Number of particles to spawn
+        const PARTICLE_SPEED = 200; // Initial particle velocity
+        const PARTICLE_LIFESPAN = 600; // Particle duration in milliseconds
+        const PARTICLE_SCALE_START = 0.8; // Starting particle scale
+        const PARTICLE_SCALE_END = 0; // Ending particle scale (fade out)
+
+        // Play explosion sound
+        this.scene.sound.play('explosion-wave');
+
+        // Create particle emitter at projectile position
+        const particles = this.scene.add.particles(this.x, this.y, 'whale-ball', {
+            speed: { min: PARTICLE_SPEED * 0.5, max: PARTICLE_SPEED },
+            angle: { min: 0, max: 360 }, // Emit in all directions
+            scale: { start: PARTICLE_SCALE_START, end: PARTICLE_SCALE_END },
+            alpha: { start: 1, end: 0 }, // Fade out
+            lifespan: PARTICLE_LIFESPAN,
+            gravityY: 400, // Particles fall down
+            quantity: PARTICLE_COUNT,
+            blendMode: 'NORMAL'
+        });
+
+        // Emit particles once and then destroy the emitter
+        particles.explode();
+
+        // Clean up the particle emitter after all particles have died
+        this.scene.time.delayedCall(PARTICLE_LIFESPAN, () => {
+            particles.destroy();
+        });
     }
 
     /**
