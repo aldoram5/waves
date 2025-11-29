@@ -355,7 +355,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
                 this.deathScaleProgress = 0;
                 // Hide wave immediately
                 this.waveSprite.setVisible(false);
-                // TODO: Play death sound
+                // Play death sound effect (one-time, no loop)
+                this.scene.sound.play('deathwave');
                 break;
         }
     }

@@ -2,6 +2,27 @@
     "section1": {
         "files": [
             {
+                "url": [
+                    "assets/sounds/absorb-sound.wav"
+                ],
+                "type": "audio",
+                "key": "absorb-sound"
+            },
+            {
+                "url": [
+                    "assets/sounds/bounce-sound.wav"
+                ],
+                "type": "audio",
+                "key": "bounce-sound"
+            },
+            {
+                "url": [
+                    "assets/sounds/deathwave.wav"
+                ],
+                "type": "audio",
+                "key": "deathwave"
+            },
+            {
                 "url": "assets/enemy-base.png",
                 "type": "image",
                 "key": "enemy-base"
@@ -30,6 +51,13 @@
                 "url": "assets/enemyAttackwhale.png",
                 "type": "image",
                 "key": "enemyAttackwhale"
+            },
+            {
+                "url": [
+                    "assets/sounds/explosion-wave.wav"
+                ],
+                "type": "audio",
+                "key": "explosion-wave"
             },
             {
                 "url": "assets/wave1.png",
